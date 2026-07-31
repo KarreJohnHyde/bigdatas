@@ -1,0 +1,53 @@
+# Social Network Analysis Configuration
+
+# Data Settings
+data:
+  input_file: "data/raw/facebook_combined.txt"
+  ego_folder: "data/raw/facebook/"
+  output_dir: "data/results/"
+  processed_dir: "data/processed/"
+
+# Analysis Settings
+analysis:
+  # Centrality Analysis
+  centrality:
+    degree: true
+    betweenness: true
+    closeness: true
+    eigenvector: true
+  
+  # Community Detection
+  community:
+    louvain: true
+    girvan_newman: false  # Slower algorithm
+    label_propagation: true
+  
+  # Network Metrics
+  metrics:
+    clustering_coefficient: true
+    diameter: true
+    density: true
+    average_degree: true
+    connected_components: true
+
+# Performance Settings
+performance:
+  max_memory_gb: 8
+  chunk_size: 10000
+  parallel_processing: true
+  num_workers: 4
+
+# Visualization Settings
+visualization:
+  interactive: true
+  max_nodes_display: 1000
+  layout_algorithm: "spring"
+  node_size_range: [5, 25]
+  edge_width_range: [0.5, 3.0]
+  
+# Output Settings
+output:
+  save_graph: true
+  save_metrics: true
+  save_visualizations: true
+  export_formats: ["html", "png", "csv"] 

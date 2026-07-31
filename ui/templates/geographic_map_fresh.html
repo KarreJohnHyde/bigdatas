@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geographic Network Map - Facebook Social Network Analysis (FRESH v3.0 - CACHE BUSTED)</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .glass-card {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+        
+        .dark-button {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .dark-button:hover {
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+            transform: translateY(-2px);
+        }
+        
+        .stat-card {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        
+        .influence-high { color: #10b981; }
+        .influence-medium { color: #f59e0b; }
+        .influence-low { color: #6b7280; }
+        
+        #map {
+            height: 70vh;
+            border-radius: 12px;
+            border: 2px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .loading-spinner {
+            border: 3px solid rgba(59, 130, 246, 0.3);
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
+        <div class="text-center text-white">
+            <div class="loading-spinner mb-4"></div>
+            <h1 class="text-4xl font-bold gradient-text mb-2">Loading Geographic Map</h1>
+            <p id="loading-text" class="text-lg">Waiting for analysis to complete...</p>
+            <div class="w-64 bg-gray-800 rounded-full h-2 mt-4">
+                <div id="progress-bar" class="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <p id="progress-text" class="text-sm mt-2">0%</p>
+        </div>
+    </div>
+
+    <div id="main-content" class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" style="display: none;">
+        <!-- Header -->
+        <nav class="glass-card m-4">
+            <div class="px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <h1 class="text-2xl font-bold text-white">
+                        <i class="fas fa-globe-americas mr-3 text-blue-400"></i>
+                        Geographic Network Map
+                        <span class="text-sm bg-green-500 text-white px-2 py-1 rounded-full ml-2">FRESH v3.0</span>
+                    </h1>
+                    <div class="flex space-x-4">
+                        <a href="/" class="dark-button">
+                            <i class="fas fa-home mr-2"></i>Dashboard
+                        </a>
+                        <a href="/user-filter" class="dark-button">
+                            <i class="fas fa-users mr-2"></i>User Filter
+                        </a>
+                        <a href="/interactive-network" class="dark-button">
+                            <i class="fas fa-network-wired mr-2"></i>Interactive Network
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="px-4 pb-8">
+            <!-- Statistics Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="stat-card">
+                    <div class="flex items-center">
+                        <i class="fas fa-users text-blue-400 text-2xl mr-3"></i>
+                        <div>
+                            <p class="text-gray-400 text-sm">Total Users</p>
+                            <p class="text-white text-xl font-bold" id="total-users">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="flex items-center">
+                        <i class="fas fa-map-marker-alt text-green-400 text-2xl mr-3"></i>
+                        <div>
+                            <p class="text-gray-400 text-sm">Locations</p>
+                            <p class="text-white text-xl font-bold" id="total-locations">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="flex items-center">
+                        <i class="fas fa-globe text-purple-400 text-2xl mr-3"></i>
+                        <div>
+                            <p class="text-gray-400 text-sm">Continents</p>
+                            <p class="text-white text-xl font-bold" id="total-continents">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="flex items-center">
+                        <i class="fas fa-crown text-yellow-400 text-2xl mr-3"></i>
+                        <div>
+                            <p class="text-gray-400 text-sm">Top Influencers</p>
+                            <p class="text-white text-xl font-bold" id="top-influencers">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Map Container -->
+            <div class="glass-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-white">
+                        <i class="fas fa-map mr-2 text-blue-400"></i>
+                        Global User Distribution
+                    </h2>
+                    <div class="flex items-center space-x-4">
+                        <div class="loading-spinner" id="loading-spinner" style="display: none;"></div>
+                        <span class="text-gray-400 text-sm" id="loading-text">Loading fresh data...</span>
+                    </div>
+                </div>
+                
+                <!-- Map -->
+                <div id="map"></div>
+            </div>
+
+            <!-- Controls -->
+            <div class="glass-card mt-6 p-6">
+                <h3 class="text-xl font-bold text-white mb-4">Map Controls</h3>
+                <div class="flex flex-wrap gap-4">
+                    <button id="show-all" class="dark-button">
+                        <i class="fas fa-eye mr-2"></i>Show All Users
+                    </button>
+                    <button id="show-influencers" class="dark-button">
+                        <i class="fas fa-crown mr-2"></i>Show Top Influencers
+                    </button>
+                    <button id="show-connections" class="dark-button">
+                        <i class="fas fa-project-diagram mr-2"></i>Show Connections
+                    </button>
+                    <button id="reset-map" class="dark-button">
+                        <i class="fas fa-undo mr-2"></i>Reset View
+                    </button>
+                    <button id="force-refresh" class="dark-button" style="background: linear-gradient(135deg, #10b981, #059669);">
+                        <i class="fas fa-sync-alt mr-2"></i>Force Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div> <!-- End main-content -->
+
+    <script>
+        let map;
+        let allUsers = [];
+        let userMarkers = [];
+        let connectionLines = [];
+        let isShowingConnections = false;
+
+        // Initialize map
+        function initMap() {
+            map = L.map('map').setView([20, 0], 2);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+        }
+
+        // Load geographic data with cache busting
+        async function loadGeographicData() {
+            try {
+                showLoading(true);
+                
+                // Add cache busting parameter
+                const timestamp = new Date().getTime();
+                const response = await fetch(`/api/geographic-data?t=${timestamp}&fresh=true`, {
+                    cache: 'no-cache',
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.error('Error:', data.error);
+                    showLoading(false);
+                    return;
+                }
+                
+                console.log(`[FRESH] Loaded ${data.locations.length} users from API`);
+                allUsers = data.locations;
+                displayUsers(allUsers);
+                updateStatistics(data);
+                showLoading(false);
+            } catch (error) {
+                console.error('Error loading geographic data:', error);
+                showLoading(false);
+            }
+        }
+
+        // Display users on map
+        function displayUsers(users) {
+            console.log(`[FRESH] Displaying ${users.length} users on map`);
+            
+            // Clear existing markers
+            userMarkers.forEach(marker => map.removeLayer(marker));
+            userMarkers = [];
+            
+            users.forEach(user => {
+                // Very small dots like reference image
+                const size = Math.max(1.2, user.degree * 15 + 1.2);
+                const color = getColorByInfluence(user.degree);
+                
+                const marker = L.circleMarker([user.lat, user.lon], {
+                    radius: size,
+                    fillColor: color,
+                    color: '#fff',
+                    weight: 0.3,
+                    opacity: 0.9,
+                    fillOpacity: 0.8
+                }).addTo(map);
+                
+                // Add popup with user info
+                const influencePercent = ((user.degree / Math.max(...allUsers.map(u => u.degree))) * 100).toFixed(1);
+                marker.bindPopup(`
+                    <div style="color: #1f2937; font-family: Arial, sans-serif;">
+                        <h3 style="margin: 0 0 8px 0; color: #1f2937; font-weight: bold;">User ${user.user_id}</h3>
+                        <p style="margin: 4px 0; color: #6b7280;"><strong>Location:</strong> ${user.city}</p>
+                        <p style="margin: 4px 0; color: #6b7280;"><strong>Connections:</strong> ${user.degree}</p>
+                        <p style="margin: 4px 0; color: #6b7280;"><strong>Influence:</strong> ${influencePercent}%</p>
+                        <p style="margin: 4px 0; color: #6b7280;"><strong>Continent:</strong> ${user.continent}</p>
+                    </div>
+                `);
+                
+                userMarkers.push(marker);
+            });
+        }
+
+        // Get color based on influence
+        function getColorByInfluence(degree) {
+            const maxDegree = Math.max(...allUsers.map(u => u.degree));
+            const influence = degree / maxDegree;
+            
+            if (influence > 0.7) return '#10b981'; // Green for high influence
+            if (influence > 0.3) return '#f59e0b'; // Yellow for medium influence
+            return '#6b7280'; // Gray for low influence
+        }
+
+        // Update statistics
+        function updateStatistics(data) {
+            document.getElementById('total-users').textContent = data.total_users.toLocaleString();
+            
+            const uniqueLocations = new Set(data.locations.map(u => u.city)).size;
+            document.getElementById('total-locations').textContent = uniqueLocations;
+            
+            const uniqueContinents = new Set(data.locations.map(u => u.continent)).size;
+            document.getElementById('total-continents').textContent = uniqueContinents;
+            
+            const topInfluencers = data.locations.filter(u => u.degree > 0).length;
+            document.getElementById('top-influencers').textContent = topInfluencers;
+        }
+
+        // Show/hide loading
+        function showLoading(show) {
+            const spinner = document.getElementById('loading-spinner');
+            const text = document.getElementById('loading-text');
+            
+            if (show) {
+                spinner.style.display = 'block';
+                text.textContent = 'Loading fresh data...';
+            } else {
+                spinner.style.display = 'none';
+                text.textContent = `Loaded ${allUsers.length} users`;
+            }
+        }
+
+        // Show all users
+        document.getElementById('show-all').addEventListener('click', () => {
+            displayUsers(allUsers);
+            isShowingConnections = false;
+        });
+
+        // Show top influencers (top 20%)
+        document.getElementById('show-influencers').addEventListener('click', () => {
+            const sortedUsers = allUsers.sort((a, b) => b.degree - a.degree);
+            const topCount = Math.max(50, Math.floor(allUsers.length * 0.2));
+            const topUsers = sortedUsers.slice(0, topCount);
+            displayUsers(topUsers);
+            isShowingConnections = false;
+        });
+
+        // Show connections (sample)
+        document.getElementById('show-connections').addEventListener('click', () => {
+            if (isShowingConnections) {
+                // Hide connections
+                connectionLines.forEach(line => map.removeLayer(line));
+                connectionLines = [];
+                isShowingConnections = false;
+            } else {
+                // Show sample connections
+                const sampleUsers = allUsers.filter(u => u.degree > 0).slice(0, 100);
+                sampleUsers.forEach(user => {
+                    const connectedUsers = allUsers.filter(u => 
+                        u.user_id !== user.user_id && 
+                        Math.random() < 0.1 // 10% chance of connection
+                    );
+                    
+                    connectedUsers.forEach(connected => {
+                        const line = L.polyline(
+                            [[user.lat, user.lon], [connected.lat, connected.lon]],
+                            {color: 'rgba(59, 130, 246, 0.3)', weight: 1}
+                        ).addTo(map);
+                        connectionLines.push(line);
+                    });
+                });
+                isShowingConnections = true;
+            }
+        });
+
+        // Reset map view
+        document.getElementById('reset-map').addEventListener('click', () => {
+            map.setView([20, 0], 2);
+            displayUsers(allUsers);
+            connectionLines.forEach(line => map.removeLayer(line));
+            connectionLines = [];
+            isShowingConnections = false;
+        });
+
+        // Force refresh
+        document.getElementById('force-refresh').addEventListener('click', () => {
+            console.log('[FRESH] Force refreshing geographic data...');
+            loadGeographicData();
+        });
+
+        // Check if analysis is complete
+        async function checkAnalysisStatus() {
+            try {
+                const response = await fetch('/api/analysis-status');
+                const data = await response.json();
+                
+                if (data.status === 'complete' && data.progress === 100) {
+                    console.log('[FRESH] Analysis 100% complete, showing geographic map');
+                    hideLoadingScreen();
+                    initMap();
+                    loadGeographicData();
+                } else {
+                    console.log(`[FRESH] Analysis ${data.progress || 0}% complete, waiting...`);
+                    updateLoadingProgress(data.progress || 0, data.current_step || 'Processing...');
+                    setTimeout(checkAnalysisStatus, 1000); // Check every 1 second
+                }
+            } catch (error) {
+                console.error('[FRESH] Error checking analysis status:', error);
+                updateLoadingProgress(0, 'Error checking status...');
+                setTimeout(checkAnalysisStatus, 2000);
+            }
+        }
+
+        // Update loading progress
+        function updateLoadingProgress(progress, step) {
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const loadingText = document.getElementById('loading-text');
+            
+            if (progressBar && progressText && loadingText) {
+                progressBar.style.width = progress + '%';
+                progressText.textContent = Math.round(progress) + '%';
+                loadingText.textContent = step || 'Analysis in progress... Please wait for all 6 steps to complete.';
+            }
+        }
+
+        // Hide loading screen and show main content
+        function hideLoadingScreen() {
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('main-content').style.display = 'block';
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 [FRESH v3.0] Geographic map page loaded, checking analysis status...');
+            console.log('🚀 [FRESH v3.0] This is the NEW fresh geographic map page!');
+            checkAnalysisStatus();
+        });
+    </script>
+</body>
+</html>

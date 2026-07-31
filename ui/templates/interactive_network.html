@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Network Visualization - Facebook Social Network</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            font-family: 'Inter', sans-serif;
+            color: #e2e8f0;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .glass-card {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .dark-button {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            border: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .dark-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+        }
+        
+        .control-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            max-width: 300px;
+        }
+        
+        .info-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 350px;
+        }
+        
+        .network-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #3b82f6;
+            border-top: 4px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .node-tooltip {
+            position: absolute;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(59, 130, 246, 0.5);
+            border-radius: 12px;
+            padding: 1rem;
+            color: white;
+            font-size: 14px;
+            pointer-events: none;
+            z-index: 1000;
+            max-width: 300px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+        
+        .legend {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(15, 23, 42, 0.9);
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 0.5rem 0;
+            gap: 0.5rem;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .stat-item {
+            background: rgba(59, 130, 246, 0.1);
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+        
+        .stat-label {
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="text-center text-white">
+            <div class="loading-spinner mb-4"></div>
+            <h2 class="text-2xl font-bold mb-2">Loading Interactive Network</h2>
+            <p id="loading-text">Preparing 3D network visualization...</p>
+        </div>
+    </div>
+
+    <!-- Control Panel -->
+    <div class="control-panel glass-card">
+        <h3 class="text-xl font-bold text-white mb-4">
+            <i class="fas fa-network-wired text-blue-400 mr-2"></i>
+            Network Controls
+        </h3>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">View Mode</label>
+                <select id="view-mode" class="w-full p-2 bg-gray-800 border border-gray-600 rounded-lg text-white">
+                    <option value="all">All Users</option>
+                    <option value="top-influencers">Top Influencers</option>
+                    <option value="communities">By Communities</option>
+                    <option value="centrality">By Centrality</option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Node Size</label>
+                <select id="node-size" class="w-full p-2 bg-gray-800 border border-gray-600 rounded-lg text-white">
+                    <option value="degree">Degree Centrality</option>
+                    <option value="betweenness">Betweenness Centrality</option>
+                    <option value="closeness">Closeness Centrality</option>
+                    <option value="eigenvector">Eigenvector Centrality</option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Color By</label>
+                <select id="color-by" class="w-full p-2 bg-gray-800 border border-gray-600 rounded-lg text-white">
+                    <option value="community">Community</option>
+                    <option value="centrality">Centrality</option>
+                    <option value="degree">Degree</option>
+                </select>
+            </div>
+            
+            <div class="flex gap-2">
+                <button id="reset-view" class="dark-button flex-1">
+                    <i class="fas fa-home"></i> Reset View
+                </button>
+                <button id="toggle-animation" class="dark-button flex-1">
+                    <i class="fas fa-play"></i> Animate
+                </button>
+            </div>
+            
+            <div class="flex gap-2">
+                <a href="/" class="dark-button flex-1">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+                <a href="/geographic-map" class="dark-button flex-1">
+                    <i class="fas fa-map"></i> Geographic Map
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Panel -->
+    <div class="info-panel glass-card">
+        <h3 class="text-xl font-bold text-white mb-4">
+            <i class="fas fa-info-circle text-blue-400 mr-2"></i>
+            Network Information
+        </h3>
+        
+        <div id="network-stats" class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-value" id="total-nodes">-</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="total-edges">-</div>
+                <div class="stat-label">Connections</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="communities">-</div>
+                <div class="stat-label">Communities</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="density">-</div>
+                <div class="stat-label">Density</div>
+            </div>
+        </div>
+        
+        <div id="selected-node-info" class="mt-4 hidden">
+            <h4 class="text-lg font-semibold text-white mb-2">Selected User</h4>
+            <div id="node-details" class="text-sm text-gray-300"></div>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+        <h4 class="text-lg font-semibold text-white mb-2">Legend</h4>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #3b82f6;"></div>
+            <span class="text-sm">High Influence</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #8b5cf6;"></div>
+            <span class="text-sm">Medium Influence</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #10b981;"></div>
+            <span class="text-sm">Low Influence</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #f59e0b;"></div>
+            <span class="text-sm">Community Centers</span>
+        </div>
+    </div>
+
+    <!-- Network Container -->
+    <div class="network-container">
+        <svg id="network-svg" width="100%" height="100%"></svg>
+    </div>
+
+    <!-- Node Tooltip -->
+    <div id="node-tooltip" class="node-tooltip" style="display: none;"></div>
+
+    <script>
+        let networkData = null;
+        let simulation = null;
+        let svg, g, nodes, links, labels;
+        let isAnimating = false;
+        let selectedNode = null;
+
+        // Color schemes
+        const colorSchemes = {
+            community: d3.scaleOrdinal(d3.schemeCategory10),
+            centrality: d3.scaleSequential(d3.interpolateViridis),
+            degree: d3.scaleSequential(d3.interpolateBlues)
+        };
+
+        // Initialize the visualization
+        async function initNetwork() {
+            try {
+                updateLoadingText("Loading network data...");
+                
+                // Load network data
+                const response = await fetch('/api/network-data');
+                if (!response.ok) {
+                    throw new Error('Failed to load network data');
+                }
+                
+                networkData = await response.json();
+                updateLoadingText("Rendering network visualization...");
+                
+                // Setup SVG
+                setupSVG();
+                
+                // Create simulation
+                createSimulation();
+                
+                // Render network
+                renderNetwork();
+                
+                // Setup controls
+                setupControls();
+                
+                // Hide loading overlay
+                document.getElementById('loading-overlay').style.display = 'none';
+                
+                console.log('Interactive network loaded successfully!');
+                
+            } catch (error) {
+                console.error('Error loading network:', error);
+                updateLoadingText("Error loading network data. Please try again.");
+            }
+        }
+
+        function updateLoadingText(text) {
+            document.getElementById('loading-text').textContent = text;
+        }
+
+        function setupSVG() {
+            svg = d3.select("#network-svg");
+            g = svg.append("g");
+            
+            // Add zoom behavior
+            const zoom = d3.zoom()
+                .scaleExtent([0.1, 10])
+                .on("zoom", (event) => {
+                    g.attr("transform", event.transform);
+                });
+            
+            svg.call(zoom);
+        }
+
+        function createSimulation() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            simulation = d3.forceSimulation(networkData.nodes)
+                .force("link", d3.forceLink(networkData.links).id(d => d.id).distance(50))
+                .force("charge", d3.forceManyBody().strength(-300))
+                .force("center", d3.forceCenter(width / 2, height / 2))
+                .force("collision", d3.forceCollide().radius(20))
+                .on("tick", ticked);
+        }
+
+        function renderNetwork() {
+            // Create links
+            links = g.append("g")
+                .attr("class", "links")
+                .selectAll("line")
+                .data(networkData.links)
+                .enter().append("line")
+                .attr("stroke", "#4a5568")
+                .attr("stroke-opacity", 0.6)
+                .attr("stroke-width", 1);
+
+            // Create nodes
+            nodes = g.append("g")
+                .attr("class", "nodes")
+                .selectAll("circle")
+                .data(networkData.nodes)
+                .enter().append("circle")
+                .attr("r", d => getNodeSize(d))
+                .attr("fill", d => getNodeColor(d))
+                .attr("stroke", "#fff")
+                .attr("stroke-width", 2)
+                .style("cursor", "pointer")
+                .on("click", handleNodeClick)
+                .on("mouseover", handleNodeHover)
+                .on("mouseout", handleNodeOut);
+
+            // Create labels
+            labels = g.append("g")
+                .attr("class", "labels")
+                .selectAll("text")
+                .data(networkData.nodes)
+                .enter().append("text")
+                .text(d => d.degree > 50 ? `User ${d.id}` : "")
+                .attr("text-anchor", "middle")
+                .attr("dy", "0.35em")
+                .attr("fill", "#fff")
+                .attr("font-size", "12px")
+                .attr("font-weight", "bold");
+
+            // Update stats
+            updateNetworkStats();
+        }
+
+        function getNodeSize(d) {
+            const sizeBy = document.getElementById('node-size').value;
+            const maxSize = 20;
+            const minSize = 3;
+            
+            let value = 0;
+            switch(sizeBy) {
+                case 'degree':
+                    value = d.degree_centrality || 0;
+                    break;
+                case 'betweenness':
+                    value = d.betweenness_centrality || 0;
+                    break;
+                case 'closeness':
+                    value = d.closeness_centrality || 0;
+                    break;
+                case 'eigenvector':
+                    value = d.eigenvector_centrality || 0;
+                    break;
+            }
+            
+            return Math.max(minSize, (value * maxSize) + minSize);
+        }
+
+        function getNodeColor(d) {
+            const colorBy = document.getElementById('color-by').value;
+            
+            switch(colorBy) {
+                case 'community':
+                    return colorSchemes.community(d.community || 0);
+                case 'centrality':
+                    return colorSchemes.centrality(d.degree_centrality || 0);
+                case 'degree':
+                    return colorSchemes.degree(d.degree_centrality || 0);
+                default:
+                    return '#3b82f6';
+            }
+        }
+
+        function handleNodeClick(event, d) {
+            selectedNode = d;
+            updateSelectedNodeInfo(d);
+            
+            // Highlight connected nodes
+            const connectedNodes = networkData.links
+                .filter(link => link.source.id === d.id || link.target.id === d.id)
+                .map(link => link.source.id === d.id ? link.target.id : link.source.id);
+            
+            nodes.style("opacity", node => 
+                node.id === d.id || connectedNodes.includes(node.id) ? 1 : 0.3
+            );
+            
+            links.style("opacity", link => 
+                link.source.id === d.id || link.target.id === d.id ? 1 : 0.1
+            );
+        }
+
+        function handleNodeHover(event, d) {
+            const tooltip = d3.select("#node-tooltip");
+            tooltip
+                .style("display", "block")
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 10) + "px")
+                .html(`
+                    <div class="font-bold text-blue-400">User ${d.id}</div>
+                    <div class="text-sm mt-1">
+                        <div>Degree: ${(d.degree_centrality || 0).toFixed(3)}</div>
+                        <div>Betweenness: ${(d.betweenness_centrality || 0).toFixed(3)}</div>
+                        <div>Community: ${d.community || 'Unknown'}</div>
+                        <div>Connections: ${d.degree || 0}</div>
+                    </div>
+                `);
+        }
+
+        function handleNodeOut(event, d) {
+            d3.select("#node-tooltip").style("display", "none");
+        }
+
+        function updateSelectedNodeInfo(d) {
+            const infoDiv = document.getElementById('selected-node-info');
+            const detailsDiv = document.getElementById('node-details');
+            
+            detailsDiv.innerHTML = `
+                <div class="space-y-2">
+                    <div><strong>User ID:</strong> ${d.id}</div>
+                    <div><strong>Degree Centrality:</strong> ${(d.degree_centrality || 0).toFixed(4)}</div>
+                    <div><strong>Betweenness Centrality:</strong> ${(d.betweenness_centrality || 0).toFixed(4)}</div>
+                    <div><strong>Closeness Centrality:</strong> ${(d.closeness_centrality || 0).toFixed(4)}</div>
+                    <div><strong>Eigenvector Centrality:</strong> ${(d.eigenvector_centrality || 0).toFixed(4)}</div>
+                    <div><strong>Community:</strong> ${d.community || 'Unknown'}</div>
+                    <div><strong>Total Connections:</strong> ${d.degree || 0}</div>
+                </div>
+            `;
+            
+            infoDiv.classList.remove('hidden');
+        }
+
+        function updateNetworkStats() {
+            document.getElementById('total-nodes').textContent = networkData.nodes.length;
+            document.getElementById('total-edges').textContent = networkData.links.length;
+            document.getElementById('communities').textContent = new Set(networkData.nodes.map(d => d.community)).size;
+            document.getElementById('density').textContent = (networkData.density || 0).toFixed(4);
+        }
+
+        function setupControls() {
+            // View mode change
+            document.getElementById('view-mode').addEventListener('change', (e) => {
+                filterNodes(e.target.value);
+            });
+            
+            // Node size change
+            document.getElementById('node-size').addEventListener('change', () => {
+                nodes.attr("r", d => getNodeSize(d));
+            });
+            
+            // Color change
+            document.getElementById('color-by').addEventListener('change', () => {
+                nodes.attr("fill", d => getNodeColor(d));
+            });
+            
+            // Reset view
+            document.getElementById('reset-view').addEventListener('click', () => {
+                svg.transition().duration(750).call(
+                    d3.zoom().transform,
+                    d3.zoomIdentity
+                );
+                resetHighlights();
+            });
+            
+            // Toggle animation
+            document.getElementById('toggle-animation').addEventListener('click', (e) => {
+                toggleAnimation(e.target);
+            });
+        }
+
+        function filterNodes(mode) {
+            switch(mode) {
+                case 'all':
+                    nodes.style("opacity", 1);
+                    links.style("opacity", 0.6);
+                    break;
+                case 'top-influencers':
+                    nodes.style("opacity", d => d.degree_centrality > 0.1 ? 1 : 0.1);
+                    links.style("opacity", 0.3);
+                    break;
+                case 'communities':
+                    nodes.style("opacity", 1);
+                    links.style("opacity", 0.6);
+                    break;
+                case 'centrality':
+                    nodes.style("opacity", d => d.degree_centrality > 0.05 ? 1 : 0.3);
+                    links.style("opacity", 0.4);
+                    break;
+            }
+        }
+
+        function toggleAnimation(button) {
+            isAnimating = !isAnimating;
+            
+            if (isAnimating) {
+                simulation.alpha(0.3).restart();
+                button.innerHTML = '<i class="fas fa-pause"></i> Pause';
+                button.classList.add('bg-red-500');
+            } else {
+                simulation.stop();
+                button.innerHTML = '<i class="fas fa-play"></i> Animate';
+                button.classList.remove('bg-red-500');
+            }
+        }
+
+        function resetHighlights() {
+            nodes.style("opacity", 1);
+            links.style("opacity", 0.6);
+            selectedNode = null;
+            document.getElementById('selected-node-info').classList.add('hidden');
+        }
+
+        function ticked() {
+            links
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            nodes
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y);
+
+            labels
+                .attr("x", d => d.x)
+                .attr("y", d => d.y);
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            svg.attr("width", width).attr("height", height);
+            simulation.force("center", d3.forceCenter(width / 2, height / 2));
+            simulation.alpha(0.3).restart();
+        });
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initNetwork);
+    </script>
+</body>
+</html>

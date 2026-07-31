@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Analytics Dashboard - Facebook Social Network Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/advanced_ui/static/css/advanced_style.css">
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-screen">
+    <!-- Navigation Header -->
+    <nav class="bg-slate-800 shadow-lg border-b border-slate-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
+                        <i class="fas fa-chart-line text-blue-400 text-2xl mr-3"></i>
+                        <h1 class="text-xl font-bold text-white">Advanced Analytics Dashboard</h1>
+                        <span class="text-sm bg-blue-500 text-white px-2 py-1 rounded-full ml-3">ADVANCED</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-home mr-1"></i>Main Dashboard
+                    </a>
+                    <a href="/user-filter" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-users mr-1"></i>User Filter
+                    </a>
+                    <a href="/geographic/map" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-globe mr-1"></i>Geographic Map
+                    </a>
+                    <a href="/interactive-network" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-project-diagram mr-1"></i>Interactive Network
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <!-- Page Header -->
+        <div class="mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">Advanced Analytics Dashboard</h1>
+            <p class="text-gray-300 text-lg">Comprehensive statistical analysis, benchmarking, and network efficiency metrics for faculty presentation</p>
+        </div>
+
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
+            <div class="text-center">
+                <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <h2 class="text-2xl font-bold text-white mb-2">Loading Advanced Analytics</h2>
+                <p id="loading-text" class="text-gray-300 mb-4">Performing statistical analysis and benchmarking...</p>
+                <div class="w-64 bg-gray-700 rounded-full h-2 mx-auto">
+                    <div id="progress-bar" class="bg-blue-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <p id="progress-text" class="text-white mt-2">0%</p>
+            </div>
+        </div>
+
+        <!-- Main Dashboard Content -->
+        <div id="main-content" class="space-y-8" style="display: none;">
+            
+            <!-- Network Efficiency Metrics -->
+            <div class="bg-slate-800 rounded-lg shadow-xl p-6">
+                <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+                    <i class="fas fa-tachometer-alt text-blue-400 mr-3"></i>
+                    Network Efficiency Metrics
+                    <button onclick="showInfoModal('network-efficiency')" class="ml-3 w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold transition-colors">
+                        i
+                    </button>
+                </h2>
+                <div class="mb-6 p-4 bg-blue-900 bg-opacity-50 rounded-lg">
+                    <h3 class="text-lg font-semibold text-blue-300 mb-2">🔬 What This Analysis Shows:</h3>
+                    <p class="text-gray-300 text-sm leading-relaxed">
+                        Network efficiency measures how well information flows through the social network. 
+                        <strong>Global Efficiency</strong> shows the average efficiency of information transfer between all pairs of users. 
+                        <strong>Small World Coefficient</strong> indicates if the network has "small world" properties (high clustering + short paths). 
+                        <strong>Robustness</strong> measures how well the network resists attacks. 
+                        <strong>Power Law R²</strong> shows if the network follows a scale-free structure (few highly connected users, many with few connections).
+                    </p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-slate-700 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center">
+                                    <p class="text-gray-400 text-sm">Global Efficiency</p>
+                                    <button class="info-btn ml-2" onclick="showInfo('global-efficiency-info')" title="What does this mean?">
+                                        <i class="fas fa-info-circle text-blue-400 hover:text-blue-300"></i>
+                                    </button>
+                                </div>
+                                <p id="global-efficiency" class="text-2xl font-bold text-green-400">-</p>
+                            </div>
+                            <i class="fas fa-globe text-green-400 text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="bg-slate-700 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center">
+                                    <p class="text-gray-400 text-sm">Small World Coefficient</p>
+                                    <button class="info-btn ml-2" onclick="showInfo('small-world-info')" title="What does this mean?">
+                                        <i class="fas fa-info-circle text-blue-400 hover:text-blue-300"></i>
+                                    </button>
+                                </div>
+                                <p id="small-world-coeff" class="text-2xl font-bold text-blue-400">-</p>
+                            </div>
+                            <i class="fas fa-network-wired text-blue-400 text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="bg-slate-700 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center">
+                                    <p class="text-gray-400 text-sm">Robustness (Random)</p>
+                                    <button class="info-btn ml-2" onclick="showInfo('robustness-info')" title="What does this mean?">
+                                        <i class="fas fa-info-circle text-blue-400 hover:text-blue-300"></i>
+                                    </button>
+                                </div>
+                                <p id="robustness-random" class="text-2xl font-bold text-yellow-400">-</p>
+                            </div>
+                            <i class="fas fa-shield-alt text-yellow-400 text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="bg-slate-700 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center">
+                                    <p class="text-gray-400 text-sm">Power Law R²</p>
+                                    <button class="info-btn ml-2" onclick="showInfo('power-law-info')" title="What does this mean?">
+                                        <i class="fas fa-info-circle text-blue-400 hover:text-blue-300"></i>
+                                    </button>
+                                </div>
+                                <p id="power-law-r2" class="text-2xl font-bold text-purple-400">-</p>
+                            </div>
+                            <i class="fas fa-chart-line text-purple-400 text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistical Significance Tests -->
+            <div class="bg-slate-800 rounded-lg shadow-xl p-6">
+                <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+                    <i class="fas fa-flask text-red-400 mr-3"></i>
+                    Statistical Significance Tests
+                    <button onclick="showInfoModal('statistical-tests')" class="ml-3 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold transition-colors">
+                        i
+                    </button>
+                </h2>
+                <div class="mb-6 p-4 bg-purple-900 bg-opacity-50 rounded-lg">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-2">🧪 What These Tests Reveal:</h3>
+                    <p class="text-gray-300 text-sm leading-relaxed">
+                        <strong>Normality Tests (Shapiro-Wilk):</strong> Determine if centrality measures follow normal distributions. 
+                        Most social networks show non-normal distributions (p < 0.05), indicating complex social structures.
+                        <br><br>
+                        <strong>Correlation Analysis:</strong> Shows relationships between different centrality measures. 
+                        High correlations (r > 0.5) suggest similar influence patterns, while low correlations indicate diverse influence types.
+                        <br><br>
+                        <strong>Statistical Significance:</strong> p-values < 0.05 indicate statistically significant relationships, 
+                        meaning the patterns we observe are not due to random chance.
+                    </p>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Normality Tests -->
+                    <div>
+                        <h3 class="text-xl font-semibold text-white mb-4 flex items-center">
+                            Normality Tests (Shapiro-Wilk)
+                            <button onclick="showInfoModal('normality-tests')" class="ml-2 w-5 h-5 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold transition-colors">
+                                i
+                            </button>
+                        </h3>
+                        <div id="normality-tests" class="space-y-3">
+                            <!-- Dynamic content will be loaded here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Correlation Analysis -->
+                    <div>
+                        <h3 class="text-xl font-semibold text-white mb-4 flex items-center">
+                            Centrality Correlations
+                            <button onclick="showInfoModal('centrality-correlations')" class="ml-2 w-5 h-5 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold transition-colors">
+                                i
+                            </button>
+                        </h3>
+                        <div id="correlation-tests" class="space-y-3">
+                            <!-- Dynamic content will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Benchmarking Analysis -->
+            <div class="bg-slate-800 rounded-lg shadow-xl p-6">
+                <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+                    <i class="fas fa-balance-scale text-orange-400 mr-3"></i>
+                    Comparative Benchmarking
+                    <button onclick="showInfoModal('benchmarking')" class="ml-3 w-6 h-6 bg-orange-500 hover:bg-orange-600 text-white rounded-full flex items-center justify-center text-xs font-bold transition-colors">
+                        i
+                    </button>
+                </h2>
+                <div class="mb-6 p-4 bg-orange-900 bg-opacity-50 rounded-lg">
+                    <h3 class="text-lg font-semibold text-orange-300 mb-2">📊 What This Benchmarking Shows:</h3>
+                    <p class="text-gray-300 text-sm leading-relaxed">
+                        <strong>vs Random Network:</strong> Compares our Facebook network to a randomly connected network with same size. 
+                        Real social networks typically have higher clustering and different path lengths than random networks.
+                        <br><br>
+                        <strong>Scale-Free Properties:</strong> Tests if the network follows a power-law degree distribution. 
+                        Scale-free networks have few highly connected "hubs" and many sparsely connected nodes - typical of social networks.
+                        <br><br>
+                        <strong>vs Facebook Typical:</strong> Compares our network to typical Facebook network characteristics, 
+                        helping us understand if this dataset represents a normal Facebook network or has unique properties.
+                    </p>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Random Network Comparison -->
+                    <div class="bg-slate-700 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-white mb-3">vs Random Network</h3>
+                        <div id="random-network-comparison">
+                            <!-- Dynamic content -->
+                        </div>
+                    </div>
+                    
+                    <!-- Scale-Free Properties -->
+                    <div class="bg-slate-700 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-white mb-3">Scale-Free Properties</h3>
+                        <div id="scale-free-analysis">
+                            <!-- Dynamic content -->
+                        </div>
+                    </div>
+                    
+                    <!-- Real-World Comparison -->
+                    <div class="bg-slate-700 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-white mb-3">vs Facebook Typical</h3>
+                        <div id="real-world-comparison">
+                            <!-- Dynamic content -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Visualizations -->
+            <div class="bg-slate-800 rounded-lg shadow-xl p-6">
+                <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+                    <i class="fas fa-chart-bar text-green-400 mr-3"></i>
+                    Advanced Visualizations
+                    <button onclick="showInfoModal('visualizations')" class="ml-3 w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold transition-colors">
+                        i
+                    </button>
+                </h2>
+                <div class="mb-6 p-4 bg-green-900 bg-opacity-50 rounded-lg">
+                    <h3 class="text-lg font-semibold text-green-300 mb-2">📈 Comprehensive Visual Analysis:</h3>
+                    <p class="text-gray-300 text-sm leading-relaxed">
+                        These visualizations provide deep insights into network structure, statistical properties, and comparative analysis. 
+                        Each chart reveals different aspects of the social network's behavior and characteristics.
+                    </p>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-slate-700 rounded-lg p-4 relative">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="flex items-center">
+                                <h3 class="text-lg font-semibold text-white">Network Analytics Dashboard</h3>
+                                <button class="info-btn ml-2" onclick="showInfoModal('network-analytics-dashboard')" title="What does this show?">
+                                    <i class="fas fa-info-circle text-blue-400 hover:text-blue-300"></i>
+                                </button>
+                            </div>
+                            <button id="view-advanced-dashboard" class="view-btn" onclick="openFullscreen('advanced-dashboard-img', 'Network Analytics Dashboard')" style="display: none;">
+                                <i class="fas fa-expand text-blue-400 hover:text-blue-300"></i>
+                            </button>
+                        </div>
+                        <div class="text-center">
+                            <img id="advanced-dashboard-img" src="" alt="Advanced Analytics Dashboard" class="w-full h-64 object-cover rounded-lg mb-3" style="display: none;">
+                            <p class="text-gray-400 text-sm">Comprehensive network efficiency and structure analysis</p>
+                        </div>
+                    </div>
+                    <div class="bg-slate-700 rounded-lg p-4 relative">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="flex items-center">
+                                <h3 class="text-lg font-semibold text-white">Small World Analysis</h3>
+                                <button class="info-btn ml-2" onclick="showInfoModal('small-world-analysis')" title="What does this show?">
+                                    <i class="fas fa-info-circle text-blue-400 hover:text-blue-300"></i>
+                                </button>
+                            </div>
+                            <button id="view-small-world" class="view-btn" onclick="openFullscreen('small-world-analysis-img', 'Small World Analysis')" style="display: none;">
+                                <i class="fas fa-expand text-blue-400 hover:text-blue-300"></i>
+                            </button>
+                        </div>
+                        <div class="text-center">
+                            <img id="small-world-analysis-img" src="" alt="Small World Analysis" class="w-full h-64 object-cover rounded-lg mb-3" style="display: none;">
+                            <p class="text-gray-400 text-sm">Small world properties and power law distribution analysis</p>
+                        </div>
+                    </div>
+                    <div class="bg-slate-700 rounded-lg p-4 relative">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="flex items-center">
+                                <h3 class="text-lg font-semibold text-white">Benchmarking Analysis</h3>
+                                <button class="info-btn ml-2" onclick="showInfoModal('benchmarking-analysis')" title="What does this show?">
+                                    <i class="fas fa-info-circle text-blue-400 hover:text-blue-300"></i>
+                                </button>
+                            </div>
+                            <button id="view-benchmarking" class="view-btn" onclick="openFullscreen('benchmarking-analysis-img', 'Benchmarking Analysis')" style="display: none;">
+                                <i class="fas fa-expand text-blue-400 hover:text-blue-300"></i>
+                            </button>
+                        </div>
+                        <div class="text-center">
+                            <img id="benchmarking-analysis-img" src="" alt="Benchmarking Analysis" class="w-full h-64 object-cover rounded-lg mb-3" style="display: none;">
+                            <p class="text-gray-400 text-sm">Comparative analysis against random and real-world networks</p>
+                        </div>
+                    </div>
+                    <div class="bg-slate-700 rounded-lg p-4 relative">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="flex items-center">
+                                <h3 class="text-lg font-semibold text-white">Statistical Analysis</h3>
+                                <button class="info-btn ml-2" onclick="showInfoModal('statistical-analysis')" title="What does this show?">
+                                    <i class="fas fa-info-circle text-blue-400 hover:text-blue-300"></i>
+                                </button>
+                            </div>
+                            <button id="view-statistical" class="view-btn" onclick="openFullscreen('statistical-analysis-img', 'Statistical Analysis')" style="display: none;">
+                                <i class="fas fa-expand text-blue-400 hover:text-blue-300"></i>
+                            </button>
+                        </div>
+                        <div class="text-center">
+                            <img id="statistical-analysis-img" src="" alt="Statistical Analysis" class="w-full h-64 object-cover rounded-lg mb-3" style="display: none;">
+                            <p class="text-gray-400 text-sm">Statistical significance tests and network metrics</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Report -->
+            <div class="bg-slate-800 rounded-lg shadow-xl p-6">
+                <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+                    <i class="fas fa-file-alt text-indigo-400 mr-3"></i>
+                    Analysis Summary
+                    <button onclick="showInfoModal('summary')" class="ml-3 w-6 h-6 bg-indigo-500 hover:bg-indigo-600 text-white rounded-full flex items-center justify-center text-xs font-bold transition-colors">
+                        i
+                    </button>
+                </h2>
+                <div id="analysis-summary" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Dynamic summary content -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Info Modal -->
+    <div id="info-modal" class="fixed inset-0 bg-black bg-opacity-95 z-50 hidden flex items-center justify-center">
+        <div class="bg-slate-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="info-title" class="text-xl font-bold text-white"></h3>
+                <button onclick="closeInfoModal()" class="text-gray-400 hover:text-white text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="info-content" class="text-gray-300"></div>
+        </div>
+    </div>
+
+    <!-- Fullscreen Modal -->
+    <div id="fullscreen-modal" class="fixed inset-0 bg-black bg-opacity-95 z-50 hidden flex items-center justify-center">
+        <div class="relative w-full h-full flex items-center justify-center p-4">
+            <button id="close-fullscreen" class="absolute top-4 right-4 text-white text-2xl hover:text-gray-300 z-10">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="text-center">
+                <h2 id="fullscreen-title" class="text-2xl font-bold text-white mb-4"></h2>
+                <img id="fullscreen-image" src="" alt="Fullscreen Visualization" class="max-w-full max-h-full object-contain rounded-lg">
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Modal -->
+    <div id="info-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+        <div class="bg-slate-800 rounded-lg shadow-2xl max-w-2xl w-full mx-4 max-h-96 overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 id="info-title" class="text-xl font-bold text-white"></h3>
+                    <button id="close-info" class="text-gray-400 hover:text-white text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="info-content" class="text-gray-300 leading-relaxed">
+                    <!-- Dynamic content will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="/advanced_ui/static/js/advanced_analytics.js"></script>
+    
+    <script>
+        // Info modal functionality
+        function showInfoModal(section) {
+            const modal = document.getElementById('info-modal');
+            const title = document.getElementById('info-title');
+            const content = document.getElementById('info-content');
+            
+            const infoData = {
+                'network-efficiency': {
+                    title: 'Network Efficiency Metrics',
+                    content: `
+                        <h4 class="font-bold text-lg mb-3">What These Metrics Mean:</h4>
+                        <ul class="space-y-2 text-sm">
+                            <li><strong>Global Efficiency:</strong> Measures how efficiently information can spread through the entire network. Higher values mean faster information flow.</li>
+                            <li><strong>Small World Coefficient:</strong> Compares clustering and path length to random networks. Values > 1 indicate small-world properties.</li>
+                            <li><strong>Robustness (Random):</strong> How well the network maintains connectivity when nodes are randomly removed. Higher values = more robust.</li>
+                            <li><strong>Power Law R²:</strong> How well the degree distribution follows a power law. Values > 0.8 indicate scale-free properties.</li>
+                        </ul>
+                    `
+                },
+                'statistical-tests': {
+                    title: 'Statistical Significance Tests',
+                    content: `
+                        <h4 class="font-bold text-lg mb-3">Understanding Statistical Tests:</h4>
+                        <ul class="space-y-2 text-sm">
+                            <li><strong>Normality Tests:</strong> Check if data follows normal distribution. Social networks typically show non-normal patterns.</li>
+                            <li><strong>Correlation Analysis:</strong> Measures relationships between different centrality measures. High correlations suggest similar influence patterns.</li>
+                            <li><strong>P-Values:</strong> Probability that results occurred by chance. Values < 0.05 are statistically significant.</li>
+                            <li><strong>R-Values:</strong> Strength of correlation. Values > 0.5 indicate strong relationships.</li>
+                        </ul>
+                    `
+                },
+                'benchmarking': {
+                    title: 'Comparative Benchmarking',
+                    content: `
+                        <h4 class="font-bold text-lg mb-3">What Benchmarking Reveals:</h4>
+                        <ul class="space-y-2 text-sm">
+                            <li><strong>vs Random Network:</strong> Compares to randomly connected networks. Real social networks have different properties.</li>
+                            <li><strong>Scale-Free Properties:</strong> Checks if the network follows power-law degree distribution, common in real networks.</li>
+                            <li><strong>Density Ratio:</strong> How dense our network is compared to random networks.</li>
+                            <li><strong>Clustering Ratio:</strong> How much more clustered our network is than random networks.</li>
+                        </ul>
+                    `
+                },
+                'visualizations': {
+                    title: 'Advanced Visualizations',
+                    content: `
+                        <h4 class="font-bold text-lg mb-3">Visualization Insights:</h4>
+                        <ul class="space-y-2 text-sm">
+                            <li><strong>Network Analytics Dashboard:</strong> Overview of key network metrics and efficiency measures.</li>
+                            <li><strong>Small World Analysis:</strong> Shows clustering and path length properties characteristic of small-world networks.</li>
+                            <li><strong>Benchmarking Analysis:</strong> Comparative analysis against random and real-world networks.</li>
+                            <li><strong>Statistical Analysis:</strong> Detailed statistical tests and correlation analysis results.</li>
+                        </ul>
+                    `
+                },
+                'summary': {
+                    title: 'Analysis Summary',
+                    content: `
+                        <h4 class="font-bold text-lg mb-3">Summary Overview:</h4>
+                        <ul class="space-y-2 text-sm">
+                            <li><strong>Total Analyses:</strong> Number of different analysis types performed.</li>
+                            <li><strong>Statistical Tests:</strong> Count of statistical significance tests conducted.</li>
+                            <li><strong>Benchmarks:</strong> Number of comparative benchmarks against other networks.</li>
+                            <li><strong>Network Characteristics:</strong> Key properties identified in the analysis.</li>
+                        </ul>
+                    `
+                },
+                'normality-tests': {
+                    title: 'Normality Tests (Shapiro-Wilk)',
+                    content: `
+                        <h4 class="font-bold text-lg mb-3">What These Tests Show:</h4>
+                        <ul class="space-y-2 text-sm">
+                            <li><strong>Betweenness:</strong> Measures how often a user lies on shortest paths between other users. "Not Normal" means influence is concentrated in few users.</li>
+                            <li><strong>Closeness:</strong> Measures how close a user is to all other users. "Not Normal" means some users are much more central than others.</li>
+                            <li><strong>Degree:</strong> Number of direct connections. "Not Normal" means some users have many more friends than others (power law distribution).</li>
+                            <li><strong>Eigenvector:</strong> Measures influence based on connections to other influential users. "Not Normal" means influence is highly concentrated.</li>
+                        </ul>
+                        <p class="text-sm mt-3 text-blue-300"><strong>Why "Not Normal" is Expected:</strong> Social networks naturally have influential users and regular users, creating non-normal distributions.</p>
+                    `
+                },
+                'centrality-correlations': {
+                    title: 'Centrality Correlations',
+                    content: `
+                        <h4 class="font-bold text-lg mb-3">What These Correlations Mean:</h4>
+                        <ul class="space-y-2 text-sm">
+                            <li><strong>betweenness vs closeness (r=0.450):</strong> Moderate positive correlation. Users who are bridges between groups tend to be close to everyone.</li>
+                            <li><strong>closeness vs eigenvector (r=0.380):</strong> Moderate positive correlation. Users close to everyone often have influential connections.</li>
+                            <li><strong>degree vs betweenness (r=0.620):</strong> Strong positive correlation. Users with many friends often act as bridges between different groups.</li>
+                        </ul>
+                        <p class="text-sm mt-3 text-green-300"><strong>Interpretation:</strong> High correlations (r > 0.5) suggest similar influence patterns. Low correlations indicate diverse types of influence in the network.</p>
+                    `
+                },
+                'network-analytics-dashboard': {
+                    title: 'Network Analytics Dashboard - 4 Graphs Explained',
+                    content: `
+                        <h4 class="font-bold text-lg mb-3">Graph 1: Network Structural Metrics</h4>
+                        <p class="text-sm mb-3"><strong>What it shows:</strong> Density, Average Path Length, Clustering Coefficient, Modularity</p>
+                        <p class="text-sm mb-4"><strong>Usefulness:</strong> Quick overview of fundamental network properties. Density shows connectivity, path length shows efficiency, clustering shows local connections, modularity shows community structure.</p>
+                        
+                        <h4 class="font-bold text-lg mb-3">Graph 2: Network Property Test Results</h4>
+                        <p class="text-sm mb-3"><strong>What it shows:</strong> Efficiency, Normality, Significance, Power Law Fit, Small World properties</p>
+                        <p class="text-sm mb-4"><strong>Usefulness:</strong> Validates network characteristics. Shows if network is efficient, follows expected distributions, has significant patterns, and exhibits small-world behavior.</p>
+                        
+                        <h4 class="font-bold text-lg mb-3">Graph 3: Community Size Distribution</h4>
+                        <p class="text-sm mb-3"><strong>What it shows:</strong> How many communities exist at different size ranges</p>
+                        <p class="text-sm mb-4"><strong>Usefulness:</strong> Reveals network modular structure. Shows if there are many small groups, few large ones, or a mix - crucial for understanding social group dynamics.</p>
+                        
+                        <h4 class="font-bold text-lg mb-3">Graph 4: Additional Network Metrics</h4>
+                        <p class="text-sm mb-3"><strong>What it shows:</strong> P-values and statistical measures for various network properties</p>
+                        <p class="text-sm"><strong>Usefulness:</strong> Provides statistical confidence in network findings. Shows which properties are statistically significant and reliable.</p>
+                    `
+                },
+                'small-world-analysis': {
+                    title: 'Small World Analysis - 4 Graphs Explained',
+                    content: `
+                        <h4 class="font-bold text-lg mb-3">Graph 1: Clustering Coefficient Comparison</h4>
+                        <p class="text-sm mb-3"><strong>What it shows:</strong> How clustering changes with network size, compared to random networks</p>
+                        <p class="text-sm mb-4"><strong>Usefulness:</strong> Assesses if network maintains high clustering as it grows - key characteristic of small-world networks. Shows local connectivity patterns.</p>
+                        
+                        <h4 class="font-bold text-lg mb-3">Graph 2: Degree Distribution (Power Law)</h4>
+                        <p class="text-sm mb-3"><strong>What it shows:</strong> How many users have different numbers of connections</p>
+                        <p class="text-sm mb-4"><strong>Usefulness:</strong> Determines if network follows power law (scale-free). Shows presence of highly connected "hub" users and many users with few connections.</p>
+                        
+                        <h4 class="font-bold text-lg mb-3">Graph 3: Small World Coefficient Comparison</h4>
+                        <p class="text-sm mb-3"><strong>What it shows:</strong> Direct comparison of small-world coefficient against benchmarks</p>
+                        <p class="text-sm mb-4"><strong>Usefulness:</strong> Quantifies small-world properties. Higher values indicate network is both highly clustered AND has short path lengths.</p>
+                        
+                        <h4 class="font-bold text-lg mb-3">Graph 4: Power Law Distribution</h4>
+                        <p class="text-sm mb-3"><strong>What it shows:</strong> Log-log plot of degree distribution</p>
+                        <p class="text-sm"><strong>Usefulness:</strong> Visually confirms power law relationship. Straight line indicates scale-free properties, showing natural hierarchy in connections.</p>
+                    `
+                },
+                'benchmarking-analysis': {
+                    title: 'Benchmarking Analysis - 4 Graphs Explained',
+                    content: `
+                        <h4 class="font-bold text-lg mb-3">Graph 1: Scale-Free Properties Analysis</h4>
+                        <p class="text-sm mb-3"><strong>What it shows:</strong> Comparison of clustering, density, path length, modularity against scale-free network models</p>
+                        <p class="text-sm mb-4"><strong>Usefulness:</strong> Determines how closely our network matches theoretical scale-free networks. Shows if network has natural hierarchy and hub structure.</p>
+                        
+                        <h4 class="font-bold text-lg mb-3">Graph 2: Network Robustness Analysis</h4>
+                        <p class="text-sm mb-3"><strong>What it shows:</strong> How network properties change under different attack scenarios</p>
+                        <p class="text-sm mb-4"><strong>Usefulness:</strong> Tests network resilience. Shows how well network maintains connectivity when key users or connections are removed.</p>
+                        
+                        <h4 class="font-bold text-lg mb-3">Graph 3: Additional Scale-Free Properties</h4>
+                        <p class="text-sm mb-3"><strong>What it shows:</strong> Further comparisons of network properties against benchmarks</p>
+                        <p class="text-sm mb-4"><strong>Usefulness:</strong> Provides deeper insights into scale-free characteristics. Shows specific aspects of network structure not covered in first graph.</p>
+                        
+                        <h4 class="font-bold text-lg mb-3">Graph 4: Additional Robustness Metrics</h4>
+                        <p class="text-sm mb-3"><strong>What it shows:</strong> Additional robustness measures under various failure scenarios</p>
+                        <p class="text-sm"><strong>Usefulness:</strong> Comprehensive resilience analysis. Shows network's ability to maintain function under different types of disruptions.</p>
+                    `
+                },
+                'statistical-analysis': {
+                    title: 'Statistical Analysis - 4 Graphs Explained',
+                    content: `
+                        <h4 class="font-bold text-lg mb-3">Graph 1: Normality Test Results</h4>
+                        <p class="text-sm mb-3"><strong>What it shows:</strong> Results of normality tests for different network metrics</p>
+                        <p class="text-sm mb-4"><strong>Usefulness:</strong> Determines if data follows normal distribution. Crucial for selecting appropriate statistical methods and understanding data characteristics.</p>
+                        
+                        <h4 class="font-bold text-lg mb-3">Graph 2: Correlation Heatmap</h4>
+                        <p class="text-sm mb-3"><strong>What it shows:</strong> Correlation matrix between various network metrics</p>
+                        <p class="text-sm mb-4"><strong>Usefulness:</strong> Identifies relationships between network properties. Shows which metrics are strongly related and which are independent.</p>
+                        
+                        <h4 class="font-bold text-lg mb-3">Graph 3: P-Value Distribution</h4>
+                        <p class="text-sm mb-3"><strong>What it shows:</strong> Distribution of p-values from multiple statistical tests</p>
+                        <p class="text-sm mb-4"><strong>Usefulness:</strong> Assesses overall statistical significance. Helps identify patterns in test results and potential issues with multiple testing.</p>
+                        
+                        <h4 class="font-bold text-lg mb-3">Graph 4: Statistical Summary</h4>
+                        <p class="text-sm mb-3"><strong>What it shows:</strong> Key statistical measures (mean, median, standard deviation) for network properties</p>
+                        <p class="text-sm"><strong>Usefulness:</strong> Provides overview of data characteristics. Shows central tendency, variability, and range of network metrics.</p>
+                    `
+                }
+            };
+            
+            if (infoData[section]) {
+                title.textContent = infoData[section].title;
+                content.innerHTML = infoData[section].content;
+                modal.classList.remove('hidden');
+            }
+        }
+        
+        function closeInfoModal() {
+            document.getElementById('info-modal').classList.add('hidden');
+        }
+        
+        // Fullscreen functionality
+        function openFullscreen(imageId, title) {
+            const img = document.getElementById(imageId);
+            const modal = document.getElementById('fullscreen-modal');
+            const fullscreenImg = document.getElementById('fullscreen-image');
+            const fullscreenTitle = document.getElementById('fullscreen-title');
+            
+            if (img && img.src) {
+                fullscreenImg.src = img.src;
+                fullscreenTitle.textContent = title;
+                modal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+        
+        function closeFullscreen() {
+            const modal = document.getElementById('fullscreen-modal');
+            modal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+        
+        // Event listeners
+        document.getElementById('close-fullscreen').addEventListener('click', closeFullscreen);
+        document.getElementById('fullscreen-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeFullscreen();
+            }
+        });
+        
+        // ESC key to close
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeFullscreen();
+                closeInfoModal();
+            }
+        });
+
+        // Info button functionality
+        function showInfo(infoType) {
+            const modal = document.getElementById('info-modal');
+            const title = document.getElementById('info-title');
+            const content = document.getElementById('info-content');
+            
+            const infoData = {
+                'global-efficiency-info': {
+                    title: 'Global Efficiency Explained',
+                    content: `
+                        <div class="space-y-4">
+                            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-blue-300 mb-2">🌐 What is Global Efficiency?</h4>
+                                <p>Global Efficiency measures how quickly information can spread through your social network. Think of it like how fast news travels between friends.</p>
+                            </div>
+                            <div class="bg-green-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-green-300 mb-2">📊 What the Numbers Mean:</h4>
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li><strong>0.0 - 0.3:</strong> Information spreads slowly (like a small town)</li>
+                                    <li><strong>0.3 - 0.6:</strong> Good information flow (like a city)</li>
+                                    <li><strong>0.6 - 1.0:</strong> Very fast information spread (like social media)</li>
+                                </ul>
+                            </div>
+                            <div class="bg-purple-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-purple-300 mb-2">💡 Why This Matters:</h4>
+                                <p>Higher efficiency means your network is well-connected. This is great for spreading ideas, organizing events, or building communities!</p>
+                            </div>
+                        </div>
+                    `
+                },
+                'small-world-info': {
+                    title: 'Small World Coefficient Explained',
+                    content: `
+                        <div class="space-y-4">
+                            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-blue-300 mb-2">🌍 What is Small World?</h4>
+                                <p>The "Small World" effect means that even in large networks, most people are connected by just a few steps. Like "6 degrees of separation" - you're only 6 people away from anyone in the world!</p>
+                            </div>
+                            <div class="bg-green-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-green-300 mb-2">📊 What the Numbers Mean:</h4>
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li><strong>0.0 - 0.5:</strong> Not a small world (people are far apart)</li>
+                                    <li><strong>0.5 - 1.0:</strong> Small world network (people are close)</li>
+                                    <li><strong>1.0+:</strong> Very strong small world (like Facebook)</li>
+                                </ul>
+                            </div>
+                            <div class="bg-purple-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-purple-300 mb-2">💡 Why This Matters:</h4>
+                                <p>Small world networks are powerful! They help information spread quickly while maintaining close-knit communities. This is why social media works so well!</p>
+                            </div>
+                        </div>
+                    `
+                },
+                'robustness-info': {
+                    title: 'Network Robustness Explained',
+                    content: `
+                        <div class="space-y-4">
+                            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-blue-300 mb-2">🛡️ What is Robustness?</h4>
+                                <p>Robustness measures how well your network survives when people leave or connections break. Think of it like how a building stays standing even if some walls are removed.</p>
+                            </div>
+                            <div class="bg-green-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-green-300 mb-2">📊 What the Numbers Mean:</h4>
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li><strong>0.0 - 0.5:</strong> Fragile network (breaks easily)</li>
+                                    <li><strong>0.5 - 0.8:</strong> Stable network (survives most changes)</li>
+                                    <li><strong>0.8 - 1.0:</strong> Very robust (hard to break)</li>
+                                </ul>
+                            </div>
+                            <div class="bg-purple-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-purple-300 mb-2">💡 Why This Matters:</h4>
+                                <p>High robustness means your community stays strong even when people leave. This is important for long-term group success and resilience!</p>
+                            </div>
+                        </div>
+                    `
+                },
+                'power-law-info': {
+                    title: 'Power Law Distribution Explained',
+                    content: `
+                        <div class="space-y-4">
+                            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-blue-300 mb-2">📈 What is Power Law?</h4>
+                                <p>Power Law means a few people have many connections (influencers), while most people have fewer connections. Like celebrities vs. regular people on social media.</p>
+                            </div>
+                            <div class="bg-green-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-green-300 mb-2">📊 What the Numbers Mean:</h4>
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li><strong>0.0 - 0.5:</strong> Not following power law (more equal connections)</li>
+                                    <li><strong>0.5 - 0.8:</strong> Moderate power law (some influencers)</li>
+                                    <li><strong>0.8 - 1.0:</strong> Strong power law (clear influencers)</li>
+                                </ul>
+                            </div>
+                            <div class="bg-purple-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-purple-300 mb-2">💡 Why This Matters:</h4>
+                                <p>Power law networks have natural leaders and influencers. This helps with organization and information flow, but can also create inequality in influence.</p>
+                            </div>
+                        </div>
+                    `
+                },
+                'network-dashboard-info': {
+                    title: 'Network Analytics Dashboard Explained',
+                    content: `
+                        <div class="space-y-4">
+                            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-blue-300 mb-2">📊 What This Dashboard Shows:</h4>
+                                <p>This comprehensive dashboard combines multiple network analysis tools to give you a complete picture of how your social network works.</p>
+                            </div>
+                            <div class="bg-green-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-green-300 mb-2">🔍 Key Components:</h4>
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li><strong>Degree Distribution:</strong> Shows how many friends each person has</li>
+                                    <li><strong>Centrality Correlations:</strong> How different influence measures relate</li>
+                                    <li><strong>Community Analysis:</strong> How people group together</li>
+                                    <li><strong>Network Metrics:</strong> Overall network health and structure</li>
+                                </ul>
+                            </div>
+                            <div class="bg-purple-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-purple-300 mb-2">💡 How to Use This:</h4>
+                                <p>This dashboard helps you understand your network's strengths and weaknesses. Use it to identify key influencers, understand community structure, and optimize your social connections!</p>
+                            </div>
+                        </div>
+                    `
+                },
+                'small-world-analysis-info': {
+                    title: 'Small World Analysis Explained',
+                    content: `
+                        <div class="space-y-4">
+                            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-blue-300 mb-2">🌍 What Small World Analysis Shows:</h4>
+                                <p>This analysis reveals whether your network has "small world" properties - meaning people are connected through surprisingly few steps, even in large networks.</p>
+                            </div>
+                            <div class="bg-green-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-green-300 mb-2">📊 What You'll See:</h4>
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li><strong>Path Length Analysis:</strong> How many steps between any two people</li>
+                                    <li><strong>Clustering Analysis:</strong> How tightly connected local groups are</li>
+                                    <li><strong>Small World Coefficient:</strong> Overall small world strength</li>
+                                    <li><strong>Statistical Tests:</strong> How significant these patterns are</li>
+                                </ul>
+                            </div>
+                            <div class="bg-purple-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-purple-300 mb-2">💡 Why This Matters:</h4>
+                                <p>Small world networks are incredibly powerful! They allow information to spread quickly while maintaining close-knit communities. This is the secret behind successful social platforms!</p>
+                            </div>
+                        </div>
+                    `
+                },
+                'benchmarking-analysis-info': {
+                    title: 'Benchmarking Analysis Explained',
+                    content: `
+                        <div class="space-y-4">
+                            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-blue-300 mb-2">⚖️ What Benchmarking Shows:</h4>
+                                <p>This analysis compares your network to other types of networks (random, real-world examples) to see how unique or typical your network structure is.</p>
+                            </div>
+                            <div class="bg-green-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-green-300 mb-2">📊 What You'll See:</h4>
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li><strong>Density Comparison:</strong> How dense your network is vs. others</li>
+                                    <li><strong>Clustering Comparison:</strong> How tight your groups are vs. random</li>
+                                    <li><strong>Real-World Comparison:</strong> How you compare to Facebook, Twitter, etc.</li>
+                                    <li><strong>Performance Metrics:</strong> How efficient your network is</li>
+                                </ul>
+                            </div>
+                            <div class="bg-purple-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-purple-300 mb-2">💡 Why This Matters:</h4>
+                                <p>Benchmarking helps you understand if your network is healthy, efficient, and well-structured compared to successful social networks. It's like getting a "network health check"!</p>
+                            </div>
+                        </div>
+                    `
+                },
+                'statistical-analysis-info': {
+                    title: 'Statistical Analysis Explained',
+                    content: `
+                        <div class="space-y-4">
+                            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-blue-300 mb-2">🧪 What Statistical Analysis Shows:</h4>
+                                <p>This analysis uses mathematical tests to determine if the patterns we see in your network are real or just random chance. It's like scientific proof of your network's structure!</p>
+                            </div>
+                            <div class="bg-green-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-green-300 mb-2">📊 What You'll See:</h4>
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li><strong>Normality Tests:</strong> Whether influence patterns follow expected distributions</li>
+                                    <li><strong>Correlation Analysis:</strong> How different influence measures relate</li>
+                                    <li><strong>Significance Tests:</strong> Which patterns are statistically meaningful</li>
+                                    <li><strong>P-Values:</strong> Confidence level in our findings</li>
+                                </ul>
+                            </div>
+                            <div class="bg-purple-900 bg-opacity-30 p-4 rounded-lg">
+                                <h4 class="font-semibold text-purple-300 mb-2">💡 Why This Matters:</h4>
+                                <p>Statistical analysis gives you scientific confidence in your network analysis. It proves that the patterns we see are real and meaningful, not just random noise!</p>
+                            </div>
+                        </div>
+                    `
+                }
+            };
+            
+            if (infoData[infoType]) {
+                title.textContent = infoData[infoType].title;
+                content.innerHTML = infoData[infoType].content;
+                modal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+        
+        function closeInfo() {
+            const modal = document.getElementById('info-modal');
+            modal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+        
+        // Info modal event listeners
+        document.getElementById('close-info').addEventListener('click', closeInfo);
+        document.getElementById('info-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeInfo();
+            }
+        });
+    </script>
+</body>
+</html>

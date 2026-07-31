@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Facebook Social Network Analysis (FRESH v4.0 - NO CACHE)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            font-family: 'Inter', sans-serif;
+            color: #e2e8f0;
+        }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 20px;
+            padding: 2rem;
+            margin: 1rem 0;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .gradient-text {
+            background: linear-gradient(45deg, #f59e0b, #10b981, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 1rem 0;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 15px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(59, 130, 246, 0.3);
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .stat-card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(59, 130, 246, 0.6);
+            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.2);
+        }
+        .user-card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            padding: 1rem;
+            margin: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .user-card:hover {
+            background: rgba(30, 41, 59, 0.9);
+            border-color: rgba(59, 130, 246, 0.6);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+        }
+        .feature-section {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+        .insight-card {
+            background: rgba(30, 41, 59, 0.6);
+            border-left: 4px solid #10b981;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 0.5rem 0;
+        }
+        .dark-input {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 0.75rem;
+        }
+        .dark-input::placeholder {
+            color: rgba(226, 232, 240, 0.6);
+        }
+        .dark-button {
+            background: linear-gradient(45deg, #3b82f6, #1d4ed8);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .dark-button:hover {
+            background: linear-gradient(45deg, #1d4ed8, #1e40af);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+        }
+        .data-display {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 0.5rem 0;
+        }
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #10b981;
+        }
+        .metric-label {
+            font-size: 0.875rem;
+            color: rgba(226, 232, 240, 0.7);
+        }
+        .dark-button {
+            background: linear-gradient(45deg, #3b82f6, #1d4ed8);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .dark-button:hover {
+            background: linear-gradient(45deg, #1d4ed8, #1e40af);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
+        <div class="text-center text-white">
+            <div class="loading-spinner mb-4"></div>
+            <h1 class="text-4xl font-bold gradient-text mb-2">Ultimate Facebook Social Network Analysis</h1>
+            <p id="loading-text" class="text-lg">Creating comprehensive analysis with advanced features...</p>
+            <div class="w-64 bg-gray-800 rounded-full h-2 mt-4">
+                <div id="progress-bar" class="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <p id="progress-text" class="text-sm mt-2">0%</p>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="hidden min-h-screen p-4">
+        <div class="max-w-7xl mx-auto">
+            <!-- Header Navigation -->
+            <nav class="glass-card m-4 mb-8">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold gradient-text">Facebook Network Analysis</h1>
+                    <div class="flex gap-4">
+                        <a href="/" class="dark-button">
+                            <i class="fas fa-home mr-2"></i>Dashboard
+                        </a>
+                        <a href="/user-filter" class="dark-button">
+                            <i class="fas fa-users mr-2"></i>User Filter
+                        </a>
+                        <a href="/interactive-network" class="dark-button">
+                            <i class="fas fa-network-wired mr-2"></i>Interactive Network
+                        </a>
+                        <a href="/geographic/map?fresh=true&v=3.0&cache_bust=1" class="dark-button">
+                            <i class="fas fa-globe mr-2"></i>Geographic Map
+                        </a>
+                        <a href="/advanced-analytics" class="dark-button">
+                            <i class="fas fa-chart-line mr-2"></i>Advanced Analytics
+                        </a>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-5xl font-bold gradient-text mb-4">Ultimate Facebook Social Network Analysis</h1>
+                <p class="text-xl text-gray-300">Advanced Analysis with 224 User Features, Homophily, Education, Work & Location Networks</p>
+            </div>
+
+            <!-- Network Statistics -->
+            <div class="glass-card m-4">
+                <h2 class="text-3xl font-bold text-white mb-6">
+                    <i class="fas fa-chart-line text-blue-400 mr-3"></i>
+                    Advanced Network Metrics
+                </h2>
+                <div id="network-stats" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Stats will be populated here -->
+                </div>
+            </div>
+
+            <!-- User Search -->
+            <div class="glass-card m-4">
+                <h2 class="text-2xl font-bold text-white mb-4">
+                    <i class="fas fa-search text-blue-400 mr-2"></i>
+                    Search Any User by ID
+                </h2>
+                <div class="flex gap-4 mb-4">
+                    <input type="number" id="user-search" placeholder="Enter User ID (0-4038)" 
+                           class="flex-1 dark-input">
+                    <button id="search-user" class="dark-button">
+                        <i class="fas fa-search mr-2"></i>Search User
+                    </button>
+                </div>
+                <div id="search-results" class="hidden">
+                    <div id="searched-user-card" class="glass-card p-4"></div>
+                </div>
+            </div>
+
+            <!-- Top Influential Users -->
+            <div class="glass-card m-4">
+                <h2 class="text-3xl font-bold text-white mb-6">
+                    <i class="fas fa-crown text-yellow-400 mr-3"></i>
+                    Top Influential Users (Click for Detailed Analysis)
+                </h2>
+                <div id="top-users-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <!-- Top users will be populated here -->
+                </div>
+            </div>
+
+            <!-- Advanced Feature Analysis -->
+            <div class="glass-card m-4">
+                <h2 class="text-3xl font-bold text-white mb-6">
+                    <i class="fas fa-brain text-purple-400 mr-3"></i>
+                    Advanced Feature Analysis (224 User Features)
+                </h2>
+                
+                <!-- Homophily Analysis -->
+                <div class="feature-section">
+                    <h3 class="text-xl font-bold text-white mb-4">
+                        <i class="fas fa-heart text-red-400 mr-2"></i>
+                        Homophily Analysis - Do Similar People Connect?
+                    </h3>
+                    <div id="homophily-results" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Homophily results will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Education-based Communities -->
+                <div class="feature-section">
+                    <h3 class="text-xl font-bold text-white mb-4">
+                        <i class="fas fa-graduation-cap text-blue-400 mr-2"></i>
+                        Education-based Communities
+                    </h3>
+                    <div id="education-results" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Education results will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Work-based Networks -->
+                <div class="feature-section">
+                    <h3 class="text-xl font-bold text-white mb-4">
+                        <i class="fas fa-briefcase text-green-400 mr-2"></i>
+                        Work-based Professional Networks
+                    </h3>
+                    <div id="work-results" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Work results will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Location-based Clusters -->
+                <div class="feature-section">
+                    <h3 class="text-xl font-bold text-white mb-4">
+                        <i class="fas fa-map-marker-alt text-orange-400 mr-2"></i>
+                        Location-based Geographic Clusters
+                    </h3>
+                    <div id="location-results" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Location results will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Gender Patterns -->
+                <div class="feature-section">
+                    <h3 class="text-xl font-bold text-white mb-4">
+                        <i class="fas fa-venus-mars text-pink-400 mr-2"></i>
+                        Gender Patterns in Network
+                    </h3>
+                    <div id="gender-results" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Gender results will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Network Overview -->
+            <div class="glass-card m-4">
+                <h2 class="text-2xl font-bold text-white mb-4">
+                    <i class="fas fa-network-wired text-blue-400 mr-2"></i>
+                    Network Overview
+                </h2>
+                <div class="chart-container">
+                    <img id="network-overview" src="" alt="Network Overview" class="w-full h-full object-contain rounded-lg" style="display: none;">
+                    <div id="network-overview-placeholder" class="text-white text-center flex items-center justify-center h-full">
+                        <div>
+                            <i class="fas fa-network-wired text-4xl mb-2"></i>
+                            <p>Loading Network Overview...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Degree Distribution -->
+            <div class="glass-card m-4">
+                <h2 class="text-2xl font-bold text-white mb-4">
+                    <i class="fas fa-chart-bar text-green-400 mr-2"></i>
+                    Degree Distribution
+                </h2>
+                <div class="chart-container">
+                    <img id="degree-distribution" src="" alt="Degree Distribution" class="w-full h-full object-contain rounded-lg" style="display: none;">
+                    <div id="degree-distribution-placeholder" class="text-white text-center flex items-center justify-center h-full">
+                        <div>
+                            <i class="fas fa-chart-bar text-4xl mb-2"></i>
+                            <p>Loading Degree Distribution...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comprehensive Network Insights -->
+            <div class="glass-card m-4">
+                <h2 class="text-3xl font-bold text-white mb-6">
+                    <i class="fas fa-lightbulb text-yellow-400 mr-3"></i>
+                    Comprehensive Network Insights
+                </h2>
+                <div id="network-insights" class="space-y-4">
+                    <!-- Network insights will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Profile Modal -->
+    <div id="user-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="glass-card max-w-4xl w-full mx-4 max-h-96 overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold text-white">User Profile Analysis</h3>
+                <button id="close-modal" class="text-white text-2xl hover:text-gray-300">&times;</button>
+            </div>
+            <div id="user-profile-content" class="text-white">
+                <!-- User profile content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let analysisComplete = false;
+        let socket = null;
+
+        // Check for pre-analyzed data
+        function checkPreAnalyzedData() {
+            // Add cache-busting timestamp
+            const timestamp = new Date().getTime();
+            fetch(`/api/analysis-status?t=${timestamp}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'complete' && data.progress === 100) {
+                        console.log('[FRESH v4.0] Analysis 100% complete, loading results');
+                        analysisComplete = true;
+                        hideLoadingScreen();
+                        loadResults();
+                    } else {
+                        console.log(`[FRESH v4.0] Analysis ${data.progress || 0}% complete, showing progress...`);
+                        updateProgressBar(data.progress || 0, data.current_step || 'Processing...');
+                        startStatusPolling();
+                    }
+                })
+                .catch(error => {
+                    console.log('[FRESH v4.0] Error checking analysis status, starting polling');
+                    startStatusPolling();
+                });
+        }
+
+        // Start status polling
+        function startStatusPolling() {
+            const pollInterval = setInterval(() => {
+                // Add cache-busting timestamp
+                const timestamp = new Date().getTime();
+                fetch(`/api/status?t=${timestamp}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        updateProgress(data);
+                        if (data.complete) {
+                            clearInterval(pollInterval);
+                            analysisComplete = true;
+                            hideLoadingScreen();
+                            loadResults();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('[FRESH v4.0] Error polling status:', error);
+                    });
+            }, 1000);
+        }
+
+        // Update progress
+        function updateProgress(data) {
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const loadingText = document.getElementById('loading-text');
+            
+            if (progressBar && progressText && loadingText) {
+                progressBar.style.width = data.progress + '%';
+                progressText.textContent = data.progress + '%';
+                loadingText.textContent = data.message || 'Creating comprehensive analysis...';
+            }
+        }
+
+        // Hide loading screen
+        function hideLoadingScreen() {
+            document.getElementById('loading-screen').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+        }
+
+        // Load results
+        function loadResults() {
+            fetch('/api/results')
+                .then(response => response.json())
+                .then(data => {
+                    if (data && !data.error) {
+                        populateDashboard(data);
+                    } else {
+                        console.error('Error loading results:', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching results:', error);
+                });
+        }
+
+        // Populate dashboard with data
+        function populateDashboard(data) {
+            console.log('Populating dashboard with data:', data);
+            
+            // Populate network stats
+            populateNetworkStats(data);
+            
+            // Populate top users
+            populateTopUsers(data);
+            
+            // Populate charts
+            populateCharts(data);
+            
+            // Populate network insights
+            populateNetworkInsights(data);
+            
+            // Populate advanced features
+            populateAdvancedFeatures(data);
+        }
+
+        // Populate network statistics
+        function populateNetworkStats(data) {
+            const statsContainer = document.getElementById('network-stats');
+            if (!statsContainer || !data.network_stats) return;
+
+            const stats = data.network_stats;
+            statsContainer.innerHTML = `
+                <div class="stat-card">
+                    <div class="metric-value">${stats.total_users || 'N/A'}</div>
+                    <div class="metric-label">Total Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="metric-value">${stats.total_connections || 'N/A'}</div>
+                    <div class="metric-label">Connections</div>
+                </div>
+                <div class="stat-card">
+                    <div class="metric-value">${stats.network_density ? stats.network_density.toFixed(4) : 'N/A'}</div>
+                    <div class="metric-label">Network Density</div>
+                </div>
+                <div class="stat-card">
+                    <div class="metric-value">${stats.avg_connections ? stats.avg_connections.toFixed(1) : 'N/A'}</div>
+                    <div class="metric-label">Avg Connections</div>
+                </div>
+            `;
+        }
+
+        // Populate top users
+        function populateTopUsers(data) {
+            const topUsersContainer = document.getElementById('top-users-grid');
+            if (!topUsersContainer || !data.top_users) return;
+
+            const topUsers = data.top_users.slice(0, 12);
+            topUsersContainer.innerHTML = topUsers.map(user => `
+                <div class="user-card" onclick="showUserProfile(${user.user_id})">
+                    <div class="text-lg font-bold text-white">User ${user.user_id}</div>
+                    <div class="text-sm text-gray-300">Degree: ${user.degree_centrality ? user.degree_centrality.toFixed(3) : 'N/A'}</div>
+                    <div class="text-sm text-gray-300">Betweenness: ${user.betweenness_centrality ? user.betweenness_centrality.toFixed(3) : 'N/A'}</div>
+                    <div class="text-sm text-gray-300">Closeness: ${user.closeness_centrality ? user.closeness_centrality.toFixed(3) : 'N/A'}</div>
+                </div>
+            `).join('');
+        }
+
+        // Populate charts
+        function populateCharts(data) {
+            // Network overview
+            if (data.network_overview) {
+                const img = document.getElementById('network-overview');
+                const placeholder = document.getElementById('network-overview-placeholder');
+                if (img && placeholder) {
+                    img.src = `/visualizations/${data.network_overview}`;
+                    img.style.display = 'block';
+                    placeholder.style.display = 'none';
+                }
+            }
+
+            // Degree distribution
+            if (data.degree_distribution) {
+                const img = document.getElementById('degree-distribution');
+                const placeholder = document.getElementById('degree-distribution-placeholder');
+                if (img && placeholder) {
+                    img.src = `/visualizations/${data.degree_distribution}`;
+                    img.style.display = 'block';
+                    placeholder.style.display = 'none';
+                }
+            }
+        }
+
+        // Populate network insights
+        function populateNetworkInsights(data) {
+            const insightsContainer = document.getElementById('network-insights');
+            if (!insightsContainer) return;
+
+            const insights = [];
+            
+            if (data.network_stats) {
+                const stats = data.network_stats;
+                insights.push(`
+                    <div class="insight-card">
+                        <h4 class="font-bold text-white mb-2">Network Scale</h4>
+                        <p class="text-gray-300">This network contains ${stats.total_users} users with ${stats.total_connections} connections, making it a substantial social network.</p>
+                    </div>
+                `);
+                
+                if (stats.network_density) {
+                    insights.push(`
+                        <div class="insight-card">
+                            <h4 class="font-bold text-white mb-2">Network Density</h4>
+                            <p class="text-gray-300">With a density of ${stats.network_density.toFixed(4)}, this network shows ${stats.network_density > 0.1 ? 'high' : 'moderate'} connectivity among users.</p>
+                        </div>
+                    `);
+                }
+            }
+
+            if (data.communities) {
+                insights.push(`
+                    <div class="insight-card">
+                        <h4 class="font-bold text-white mb-2">Community Structure</h4>
+                        <p class="text-gray-300">The network contains ${data.communities.louvain.count} communities (Louvain), ${data.communities.label_propagation.count} communities (Label Propagation), and ${data.communities.greedy_modularity.count} communities (Greedy Modularity).</p>
+                    </div>
+                `);
+            }
+
+            insightsContainer.innerHTML = insights.join('');
+        }
+
+        // Populate advanced features
+        function populateAdvancedFeatures(data) {
+            // Homophily analysis
+            if (data.homophily_analysis) {
+                const homophilyContainer = document.getElementById('homophily-results');
+                if (homophilyContainer) {
+                    const homophily = data.homophily_analysis;
+                    homophilyContainer.innerHTML = `
+                        <div class="data-display">
+                            <div class="metric-value">${homophily.overall_homophily ? homophily.overall_homophily.toFixed(3) : 'N/A'}</div>
+                            <div class="metric-label">Overall Homophily Score</div>
+                            <div class="text-xs text-gray-400 mt-2">Higher values indicate similar people tend to connect</div>
+                        </div>
+                        <div class="data-display">
+                            <div class="metric-value">${homophily.interpretation || 'N/A'}</div>
+                            <div class="metric-label">Interpretation</div>
+                            <div class="text-xs text-gray-400 mt-2">Analysis of homophily patterns</div>
+                        </div>
+                    `;
+                }
+            }
+
+            // Education analysis
+            if (data.education_analysis) {
+                const educationContainer = document.getElementById('education-results');
+                if (educationContainer) {
+                    const education = data.education_analysis;
+                    educationContainer.innerHTML = `
+                        <div class="data-display">
+                            <div class="metric-value">${education.total_schools || 'N/A'}</div>
+                            <div class="metric-label">School Communities</div>
+                            <div class="text-xs text-gray-400 mt-2">Distinct educational groups identified</div>
+                        </div>
+                        <div class="data-display">
+                            <div class="metric-value">${education.largest_school || 'N/A'}</div>
+                            <div class="metric-label">Largest School Size</div>
+                            <div class="text-xs text-gray-400 mt-2">Biggest educational community</div>
+                        </div>
+                    `;
+                }
+            }
+
+            // Work analysis
+            if (data.work_analysis) {
+                const workContainer = document.getElementById('work-results');
+                if (workContainer) {
+                    const work = data.work_analysis;
+                    workContainer.innerHTML = `
+                        <div class="data-display">
+                            <div class="metric-value">${work.total_companies || 'N/A'}</div>
+                            <div class="metric-label">Workplace Networks</div>
+                            <div class="text-xs text-gray-400 mt-2">Professional networks identified</div>
+                        </div>
+                        <div class="data-display">
+                            <div class="metric-value">${work.largest_company || 'N/A'}</div>
+                            <div class="metric-label">Largest Company Size</div>
+                            <div class="text-xs text-gray-400 mt-2">Biggest professional network</div>
+                        </div>
+                    `;
+                }
+            }
+
+            // Location analysis
+            if (data.location_analysis) {
+                const locationContainer = document.getElementById('location-results');
+                if (locationContainer) {
+                    const location = data.location_analysis;
+                    locationContainer.innerHTML = `
+                        <div class="data-display">
+                            <div class="metric-value">${location.total_locations || 'N/A'}</div>
+                            <div class="metric-label">Geographic Clusters</div>
+                            <div class="text-xs text-gray-400 mt-2">Location-based groups identified</div>
+                        </div>
+                        <div class="data-display">
+                            <div class="metric-value">${location.largest_location || 'N/A'}</div>
+                            <div class="metric-label">Largest Location Cluster</div>
+                            <div class="text-xs text-gray-400 mt-2">Biggest geographic group</div>
+                        </div>
+                    `;
+                }
+            }
+
+            // Gender analysis
+            if (data.gender_analysis) {
+                const genderContainer = document.getElementById('gender-results');
+                if (genderContainer) {
+                    const gender = data.gender_analysis;
+                    genderContainer.innerHTML = `
+                        <div class="data-display">
+                            <div class="metric-value">${gender.gender_distribution ? Object.keys(gender.gender_distribution).length : 'N/A'}</div>
+                            <div class="metric-label">Gender Groups</div>
+                            <div class="text-xs text-gray-400 mt-2">Different gender categories</div>
+                        </div>
+                        <div class="data-display">
+                            <div class="metric-value">${gender.gender_homophily ? gender.gender_homophily.toFixed(3) : 'N/A'}</div>
+                            <div class="metric-label">Gender Homophily</div>
+                            <div class="text-xs text-gray-400 mt-2">Tendency for same-gender connections</div>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // Show user profile
+        function showUserProfile(userId) {
+            fetch(`/api/user/${userId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && !data.error) {
+                        displayUserProfile(data);
+                    } else {
+                        alert('User not found or error loading profile');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching user profile:', error);
+                    alert('Error loading user profile');
+                });
+        }
+
+        // Display user profile in modal
+        function displayUserProfile(userData) {
+            const modal = document.getElementById('user-modal');
+            const content = document.getElementById('user-profile-content');
+            
+            if (content) {
+                content.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="text-center">
+                            <h4 class="text-xl font-bold text-white">User ${userData.user_id} Profile</h4>
+                        </div>
+                        
+                        ${userData.centrality ? `
+                        <div class="data-display">
+                            <h5 class="font-bold text-white mb-2">Centrality Measures</h5>
+                            <div class="grid grid-cols-2 gap-2 text-sm">
+                                <div>Degree: ${userData.centrality.degree_centrality ? userData.centrality.degree_centrality.toFixed(4) : 'N/A'}</div>
+                                <div>Betweenness: ${userData.centrality.betweenness_centrality ? userData.centrality.betweenness_centrality.toFixed(4) : 'N/A'}</div>
+                                <div>Closeness: ${userData.centrality.closeness_centrality ? userData.centrality.closeness_centrality.toFixed(4) : 'N/A'}</div>
+                                <div>Eigenvector: ${userData.centrality.eigenvector_centrality ? userData.centrality.eigenvector_centrality.toFixed(4) : 'N/A'}</div>
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${userData.community ? `
+                        <div class="data-display">
+                            <h5 class="font-bold text-white mb-2">Community Information</h5>
+                            <div class="text-sm">
+                                <div>Community ID: ${userData.community.community_id || 'N/A'}</div>
+                                <div>Community Size: ${userData.community.community_size || 'N/A'}</div>
+                                <div>Method: ${userData.community.method || 'N/A'}</div>
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${userData.features ? `
+                        <div class="data-display">
+                            <h5 class="font-bold text-white mb-2">User Features</h5>
+                            <div class="text-sm space-y-1">
+                                ${userData.features.birthday ? `<div>Birthday: ${userData.features.birthday}</div>` : ''}
+                                ${userData.features.gender ? `<div>Gender: ${userData.features.gender}</div>` : ''}
+                                ${userData.features.hometown ? `<div>Hometown: ${userData.features.hometown}</div>` : ''}
+                                ${userData.features.location ? `<div>Current Location: ${userData.features.location}</div>` : ''}
+                                ${userData.features.education ? `<div>Education: ${userData.features.education}</div>` : ''}
+                                ${userData.features.work ? `<div>Work: ${userData.features.work}</div>` : ''}
+                                ${userData.features.languages ? `<div>Languages: ${userData.features.languages}</div>` : ''}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${userData.connections ? `
+                        <div class="data-display">
+                            <h5 class="font-bold text-white mb-2">Network Connections</h5>
+                            <div class="text-sm">
+                                <div>Total Connections: ${userData.connections.total || 'N/A'}</div>
+                                <div>Direct Friends: ${userData.connections.direct || 'N/A'}</div>
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${userData.similar_users && userData.similar_users.length > 0 ? `
+                        <div class="data-display">
+                            <h5 class="font-bold text-white mb-2">Similar Users</h5>
+                            <div class="text-sm">
+                                ${userData.similar_users.map(user => 
+                                    `<div>User ${user.user_id}: ${(user.similarity * 100).toFixed(1)}% similar</div>`
+                                ).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${userData.insights ? `
+                        <div class="data-display">
+                            <h5 class="font-bold text-white mb-2">Profile Insights</h5>
+                            <div class="text-sm space-y-1">
+                                <div>${userData.insights.profile_completeness || ''}</div>
+                                <div>${userData.insights.education_level || ''}</div>
+                                <div>${userData.insights.work_experience || ''}</div>
+                                <div>${userData.insights.language_diversity || ''}</div>
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        // Close modal
+        document.getElementById('close-modal').addEventListener('click', function() {
+            document.getElementById('user-modal').classList.add('hidden');
+        });
+
+        // Search user functionality
+        document.getElementById('search-user').addEventListener('click', function() {
+            const userId = document.getElementById('user-search').value;
+            if (userId) {
+                showUserProfile(parseInt(userId));
+            }
+        });
+
+        // Enter key search
+        document.getElementById('user-search').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('search-user').click();
+            }
+        });
+
+        // Initialize
+        // Initialize real-time updates
+        function initRealTimeUpdates() {
+            socket = io();
+            
+            socket.on('connect', function() {
+                console.log('Connected to real-time updates');
+                socket.emit('request_status');
+            });
+            
+            socket.on('analysis_progress', function(data) {
+                updateProgressBar(data.progress, data.current_step);
+            });
+            
+            socket.on('analysis_complete', function(data) {
+                console.log('Analysis complete!');
+                analysisComplete = true;
+                loadResults();
+            });
+            
+            socket.on('analysis_update', function(data) {
+                console.log('Analysis step completed:', data.step);
+                updateProgressMessage(`Completed: ${data.step}`);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initRealTimeUpdates();
+            checkPreAnalyzedData();
+        });
+    </script>
+</body>
+</html>

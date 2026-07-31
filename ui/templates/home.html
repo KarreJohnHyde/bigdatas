@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook Social Network Analysis - Advanced Analytics Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .floating-animation {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .pulse-glow {
+            animation: pulseGlow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes pulseGlow {
+            from { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+            to { box-shadow: 0 0 40px rgba(59, 130, 246, 0.8), 0 0 60px rgba(59, 130, 246, 0.3); }
+        }
+        
+        .network-node {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #3b82f6;
+            border-radius: 50%;
+            animation: nodePulse 3s ease-in-out infinite;
+        }
+        
+        @keyframes nodePulse {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.5); }
+        }
+        
+        .network-line {
+            position: absolute;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+            animation: lineFlow 4s linear infinite;
+        }
+        
+        @keyframes lineFlow {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        
+        .glass-effect {
+            background: rgba(30, 41, 59, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .hover-lift {
+            transition: all 0.3s ease;
+        }
+        
+        .hover-lift:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .text-glow {
+            text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+        
+        .network-visualization {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            overflow: hidden;
+            border-radius: 20px;
+        }
+        
+        .stats-counter {
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .feature-card {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6));
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            border-color: rgba(59, 130, 246, 0.5);
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(51, 65, 85, 0.7));
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <!-- Animated Background Network -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div id="network-container" class="absolute inset-0"></div>
+    </div>
+    
+    <!-- Navigation -->
+    <nav class="relative z-10 bg-slate-900/50 backdrop-blur-md border-b border-slate-700/50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-project-diagram text-white text-lg"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <h1 class="text-xl font-bold text-white leading-tight">Facebook Network Analysis</h1>
+                        <p class="text-xs text-gray-400 leading-tight">Advanced Social Network Analytics</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <a href="/" class="text-white px-2 py-1 rounded text-xs font-medium transition-colors bg-blue-600/20">
+                        <i class="fas fa-home mr-1"></i>Home
+                    </a>
+                    <a href="/dashboard" class="text-gray-300 hover:text-white px-2 py-1 rounded text-xs font-medium transition-colors">
+                        <i class="fas fa-tachometer-alt mr-1"></i>Dashboard
+                    </a>
+                    <a href="/advanced-analytics" class="text-gray-300 hover:text-white px-2 py-1 rounded text-xs font-medium transition-colors">
+                        <i class="fas fa-chart-line mr-1"></i>Analytics
+                    </a>
+                    <a href="/user-filter" class="text-gray-300 hover:text-white px-2 py-1 rounded text-xs font-medium transition-colors">
+                        <i class="fas fa-users mr-1"></i>Users
+                    </a>
+                    <a href="/geographic/map" class="text-gray-300 hover:text-white px-2 py-1 rounded text-xs font-medium transition-colors">
+                        <i class="fas fa-globe mr-1"></i>Map
+                    </a>
+                    <a href="/interactive-network" class="text-gray-300 hover:text-white px-2 py-1 rounded text-xs font-medium transition-colors">
+                        <i class="fas fa-project-diagram mr-1"></i>Network
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div class="text-center mb-16">
+            <div class="floating-animation mb-8">
+                <div class="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full pulse-glow">
+                    <i class="fas fa-network-wired text-white text-3xl"></i>
+                </div>
+            </div>
+            <h1 class="text-6xl font-black text-white mb-6 text-glow">
+                Facebook Social Network
+                <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                    Analysis
+                </span>
+            </h1>
+            <p class="text-xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
+                Advanced analytics and visualization of 4,039 users with 88,234 connections. 
+                Discover network patterns, influence metrics, and community structures through 
+                cutting-edge social network analysis.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="/advanced-analytics" class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 hover-lift">
+                    <i class="fas fa-chart-line mr-2"></i>
+                    Explore Analytics
+                </a>
+                <a href="/interactive-network" class="inline-flex items-center px-8 py-4 glass-effect text-white font-semibold rounded-lg hover:bg-slate-700/50 transition-all duration-300 hover-lift">
+                    <i class="fas fa-project-diagram mr-2"></i>
+                    Interactive Network
+                </a>
+            </div>
+        </div>
+
+        <!-- Network Visualization -->
+        <div class="network-visualization glass-effect mb-16">
+            <div class="absolute inset-0 flex items-center justify-center">
+                <div class="text-center">
+                    <div class="w-32 h-32 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-network-wired text-blue-400 text-4xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-2">Live Network Visualization</h3>
+                    <p class="text-gray-400">Interactive 3D network exploration</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Statistics -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
+            <div class="feature-card rounded-xl p-6 text-center hover-lift">
+                <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-users text-white text-xl"></i>
+                </div>
+                <h3 class="text-3xl font-bold text-white mb-2 stats-counter" id="user-count">4,039</h3>
+                <p class="text-gray-400">Total Users</p>
+            </div>
+            <div class="feature-card rounded-xl p-6 text-center hover-lift">
+                <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-link text-white text-xl"></i>
+                </div>
+                <h3 class="text-3xl font-bold text-white mb-2 stats-counter" id="connection-count">88,234</h3>
+                <p class="text-gray-400">Connections</p>
+            </div>
+            <div class="feature-card rounded-xl p-6 text-center hover-lift">
+                <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-users-cog text-white text-xl"></i>
+                </div>
+                <h3 class="text-3xl font-bold text-white mb-2 stats-counter" id="community-count">16</h3>
+                <p class="text-gray-400">Communities</p>
+            </div>
+            <div class="feature-card rounded-xl p-6 text-center hover-lift">
+                <div class="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-chart-bar text-white text-xl"></i>
+                </div>
+                <h3 class="text-3xl font-bold text-white mb-2 stats-counter" id="feature-count">224</h3>
+                <p class="text-gray-400">User Features</p>
+            </div>
+        </div>
+
+        <!-- Features Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
+            <div class="feature-card rounded-xl p-8 hover-lift">
+                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mb-4">
+                    <i class="fas fa-chart-line text-white text-lg"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3">Advanced Analytics</h3>
+                <p class="text-gray-400 mb-4">
+                    Comprehensive statistical analysis with 16 detailed visualizations, 
+                    benchmarking against random networks, and network efficiency metrics.
+                </p>
+                <a href="/advanced-analytics" class="text-blue-400 hover:text-blue-300 font-semibold">
+                    Explore Analytics <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+            
+            <div class="feature-card rounded-xl p-8 hover-lift">
+                <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center mb-4">
+                    <i class="fas fa-project-diagram text-white text-lg"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3">Interactive Network</h3>
+                <p class="text-gray-400 mb-4">
+                    3D interactive network visualization with zoom, pan, rotate capabilities. 
+                    Click nodes for detailed user analysis and community information.
+                </p>
+                <a href="/interactive-network" class="text-green-400 hover:text-green-300 font-semibold">
+                    View Network <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+            
+            <div class="feature-card rounded-xl p-8 hover-lift">
+                <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center mb-4">
+                    <i class="fas fa-globe text-white text-lg"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3">Geographic Mapping</h3>
+                <p class="text-gray-400 mb-4">
+                    Interactive world map showing user locations with influence-based sizing. 
+                    Explore geographic patterns and location-based communities.
+                </p>
+                <a href="/geographic/map" class="text-purple-400 hover:text-purple-300 font-semibold">
+                    View Map <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Analysis Highlights -->
+        <div class="glass-effect rounded-2xl p-8 mb-16">
+            <h2 class="text-3xl font-bold text-white mb-8 text-center">Analysis Highlights</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-crown text-white text-xl"></i>
+                    </div>
+                    <h4 class="text-lg font-semibold text-white mb-2">Top Influencers</h4>
+                    <p class="text-gray-400 text-sm">Users with highest centrality measures and network influence</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-users text-white text-xl"></i>
+                    </div>
+                    <h4 class="text-lg font-semibold text-white mb-2">Community Detection</h4>
+                    <p class="text-gray-400 text-sm">16 distinct communities identified using multiple algorithms</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-chart-bar text-white text-xl"></i>
+                    </div>
+                    <h4 class="text-lg font-semibold text-white mb-2">Statistical Analysis</h4>
+                    <p class="text-gray-400 text-sm">Comprehensive statistical tests and correlation analysis</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-balance-scale text-white text-xl"></i>
+                    </div>
+                    <h4 class="text-lg font-semibold text-white mb-2">Benchmarking</h4>
+                    <p class="text-gray-400 text-sm">Comparison against random and real-world networks</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="text-center">
+            <h2 class="text-4xl font-bold text-white mb-6">Ready to Explore?</h2>
+            <p class="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+                Dive into the comprehensive analysis of Facebook's social network structure. 
+                Discover patterns, influence metrics, and community dynamics.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="/advanced-analytics" class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 hover-lift">
+                    <i class="fas fa-chart-line mr-2"></i>
+                    Start Analysis
+                </a>
+                <a href="/user-filter" class="inline-flex items-center px-8 py-4 glass-effect text-white font-semibold rounded-lg hover:bg-slate-700/50 transition-all duration-300 hover-lift">
+                    <i class="fas fa-search mr-2"></i>
+                    Search Users
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="relative z-10 bg-slate-900/50 backdrop-blur-md border-t border-slate-700/50 mt-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="text-center">
+                <div class="flex items-center justify-center space-x-3 mb-4">
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-project-diagram text-white text-sm"></i>
+                    </div>
+                    <span class="text-white font-semibold">Facebook Network Analysis</span>
+                </div>
+                <p class="text-gray-400 text-sm">
+                    Advanced Social Network Analytics Dashboard - Comprehensive analysis of 4,039 users and 88,234 connections
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Animated network background
+        function createNetworkBackground() {
+            const container = document.getElementById('network-container');
+            const nodes = [];
+            const lines = [];
+            
+            // Create nodes
+            for (let i = 0; i < 50; i++) {
+                const node = document.createElement('div');
+                node.className = 'network-node';
+                node.style.left = Math.random() * 100 + '%';
+                node.style.top = Math.random() * 100 + '%';
+                node.style.animationDelay = Math.random() * 3 + 's';
+                container.appendChild(node);
+                nodes.push(node);
+            }
+            
+            // Create connections
+            for (let i = 0; i < 30; i++) {
+                const line = document.createElement('div');
+                line.className = 'network-line';
+                const startNode = nodes[Math.floor(Math.random() * nodes.length)];
+                const endNode = nodes[Math.floor(Math.random() * nodes.length)];
+                
+                const startRect = startNode.getBoundingClientRect();
+                const endRect = endNode.getBoundingClientRect();
+                
+                const length = Math.sqrt(Math.pow(endRect.left - startRect.left, 2) + Math.pow(endRect.top - startRect.top, 2));
+                const angle = Math.atan2(endRect.top - startRect.top, endRect.left - startRect.left) * 180 / Math.PI;
+                
+                line.style.width = length + 'px';
+                line.style.left = startRect.left + 'px';
+                line.style.top = startRect.top + 'px';
+                line.style.transform = `rotate(${angle}deg)`;
+                line.style.animationDelay = Math.random() * 4 + 's';
+                
+                container.appendChild(line);
+                lines.push(line);
+            }
+        }
+        
+        // Counter animations
+        function animateCounters() {
+            const counters = document.querySelectorAll('.stats-counter');
+            counters.forEach(counter => {
+                const target = parseInt(counter.textContent.replace(/,/g, ''));
+                const duration = 2000;
+                const increment = target / (duration / 16);
+                let current = 0;
+                
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= target) {
+                        current = target;
+                        clearInterval(timer);
+                    }
+                    counter.textContent = Math.floor(current).toLocaleString();
+                }, 16);
+            });
+        }
+        
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            createNetworkBackground();
+            setTimeout(animateCounters, 500);
+        });
+        
+        // Add hover effects to feature cards
+        document.querySelectorAll('.feature-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-10px)';
+            });
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+    </script>
+</body>
+</html>
